@@ -1,0 +1,49 @@
+{
+  "_description": "sync.ps1이 ECC에서 동기화 후 base/_excluded/로 이동할 항목. 우리 회사(React/Next.js + NestJS)에서 사용하지 않는 언어/프레임워크 관련 파일.",
+  "_usage": "제외 해제: 항목을 지우면 다음 sync 시 base/에 포함됨. 제외 추가: 항목을 추가하면 다음 sync 시 _excluded/로 이동.",
+
+  "rules": [
+    "golang",
+    "python"
+  ],
+
+  "agents": [
+    "go-build-resolver.md",
+    "go-reviewer.md",
+    "python-reviewer.md"
+  ],
+
+  "commands": [
+    "go-build.md",
+    "go-review.md",
+    "go-test.md",
+    "python-review.md",
+    "multi-backend.md",
+    "multi-execute.md",
+    "multi-frontend.md",
+    "multi-plan.md",
+    "multi-workflow.md",
+    "pm2.md",
+    "sessions.md",
+    "checkpoint.md"
+  ],
+
+  "skills": [
+    "configure-ecc",
+    "backend-patterns",
+    "django-patterns",
+    "django-security",
+    "django-tdd",
+    "django-verification",
+    "springboot-patterns",
+    "springboot-security",
+    "springboot-tdd",
+    "springboot-verification",
+    "golang-patterns",
+    "golang-testing",
+    "python-patterns",
+    "python-testing",
+    "java-coding-standards",
+    "jpa-patterns"
+  ]
+}
