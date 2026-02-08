@@ -49,6 +49,19 @@ mindmap
         "Playwright E2E 테스트"
       /test-coverage
         "커버리지 분석 및 개선"
+    **멀티 에이전트 파이프라인**
+      /orchestrate-start
+        "Jira → 요구사항 → 브랜치 → 플랜"
+      /orchestrate-review
+        "4명 전문가 병렬 리뷰"
+        react-reviewer
+        performance-reviewer
+        security-reviewer
+        architect
+      /orchestrate-impl
+        "Data + UI 병렬 → 통합 테스트"
+      /orchestrate-done
+        "검증 루프 → 리뷰 → PR"
     **Jira 연동**
       /jira-bug
         "Bug 이슈 생성"
@@ -97,6 +110,10 @@ flowchart LR
         jtask["/jira-task"]
         tc["/test-coverage"]
         sc["/skill-create"]
+        os["/orchestrate-start"]
+        orv["/orchestrate-review"]
+        oi["/orchestrate-impl"]
+        od["/orchestrate-done"]
     end
 
     subgraph agents["에이전트"]
@@ -112,6 +129,7 @@ flowchart LR
         a_rc["refactor-cleaner"]
         a_e2e["e2e-runner"]
         a_doc["doc-updater"]
+        a_perf["performance-reviewer"]
     end
 
     subgraph skills["스킬 (지식 베이스)"]
@@ -156,6 +174,11 @@ flowchart LR
     jtask -.- |"Jira MCP"| jtask
     tc -.- |"독립 실행"| tc
     rt -.- |"독립 실행"| rt
+
+    os --> a_plan
+    orv --> a_rr & a_perf & a_sec & a_arch
+    oi --> |"병렬 에이전트"| oi
+    od --> a_rr & a_perf & a_sec
 
     style commands fill:#1a1a2e,color:#fff
     style agents fill:#16213e,color:#fff
@@ -236,7 +259,43 @@ flowchart TD
     style A fill:#e94560,color:#fff
 ```
 
-### 5. 학습 시스템
+### 5. 멀티 에이전트 파이프라인 (orchestrate-*)
+
+```mermaid
+flowchart TD
+    A["/orchestrate-start"] --> B["요구사항 Q&A"]
+    B --> C["브랜치 생성"]
+    C --> D["plans/*.md 작성"]
+    D --> E["/orchestrate-review"]
+
+    E --> F1["react-reviewer"]
+    E --> F2["performance-reviewer"]
+    E --> F3["security-reviewer"]
+    E --> F4["architect"]
+
+    F1 & F2 & F3 & F4 --> G{"CRITICAL/HIGH?"}
+    G -->|있음| H["플랜 수정"] --> E
+    G -->|없음| I["/orchestrate-impl"]
+
+    I --> J1["Agent 1: Data Layer"]
+    I --> J2["Agent 2: UI Components"]
+    J1 & J2 --> K["Agent 3: Integration & Test"]
+
+    K --> L["/orchestrate-done"]
+    L --> M["검증 루프 (lint→build→test)"]
+    M --> N{"통과?"}
+    N -->|실패| O["수정"] --> M
+    N -->|통과| P["3명 병렬 리뷰"]
+    P --> Q["커밋 → PR 생성"]
+
+    style A fill:#e94560,color:#fff
+    style E fill:#f39c12,color:#fff
+    style I fill:#2ecc71,color:#fff
+    style L fill:#3498db,color:#fff
+    style Q fill:#0f3460,color:#fff
+```
+
+### 6. 학습 시스템
 
 ```mermaid
 flowchart TD

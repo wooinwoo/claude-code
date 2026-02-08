@@ -9,6 +9,7 @@
 | 뭘 만들어야 하는데 어디서부터 해야 할지 모르겠음 | `/plan 만들고 싶은 거 설명` |
 | 테스트부터 짜고 구현하고 싶음 | `/tdd 만들 기능 설명` |
 | 큰 기능인데 알아서 다 해줬으면 | `/orchestrate feature 기능 설명` |
+| **전문가 리뷰 포함 풀 워크플로우** | `/orchestrate-start` → `-review` → `-impl` → `-done` |
 
 ### 리뷰/검증
 
@@ -110,6 +111,21 @@
 /orchestrate feature 실시간 알림 시스템
 → 계획 → TDD → 리뷰 → 보안검토 자동
 /commit
+```
+
+### "전문가 리뷰 포함 풀 파이프라인"
+```
+/orchestrate-start
+→ 요구사항 Q&A → 브랜치 → 플랜 작성
+
+/orchestrate-review
+→ React 전문가 + 퍼포먼스 + 보안 + 아키텍처 4명 병렬 리뷰
+
+/orchestrate-impl
+→ Data Layer + UI 병렬 구현 → 통합 & 테스트
+
+/orchestrate-done
+→ lint/build/test 검증 루프 → 3명 리뷰 → 커밋 → PR 자동 생성
 ```
 
 ---

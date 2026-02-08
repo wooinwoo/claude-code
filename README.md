@@ -53,12 +53,17 @@ wiw_claude-code/
 ├── react-next/              React/Next.js 전용 추가
 │   ├── agents/
 │   │   ├── react-reviewer.md       React 코드 리뷰 에이전트
+│   │   ├── performance-reviewer.md 성능 전문가 에이전트 (Core Web Vitals, 번들, 렌더링)
 │   │   ├── next-build-resolver.md  Next.js 빌드 에러 해결 에이전트
 │   │   └── jira-analyzer.md        Jira 이슈 분석 에이전트
 │   ├── commands/
 │   │   ├── react-review.md         /react-review 커맨드
 │   │   ├── react-test.md           /react-test 커맨드
-│   │   └── next-build.md           /next-build 커맨드
+│   │   ├── next-build.md           /next-build 커맨드
+│   │   ├── orchestrate-start.md    /orchestrate-start 워크플로우 시작
+│   │   ├── orchestrate-review.md   /orchestrate-review 4명 전문가 리뷰
+│   │   ├── orchestrate-impl.md     /orchestrate-impl 병렬 구현
+│   │   └── orchestrate-done.md     /orchestrate-done 검증+PR
 │   └── skills/
 │       ├── react-patterns/         React 컴포넌트 패턴
 │       ├── react-testing/          React 테스팅 가이드
