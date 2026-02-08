@@ -1,40 +1,19 @@
 # Code Review
 
-Comprehensive security and quality review of uncommitted changes:
+Invoke the **code-reviewer** agent to review uncommitted changes.
 
-1. Get changed files: git diff --name-only HEAD
+## Process
 
-2. For each changed file, check for:
+1. Run `git diff --name-only HEAD` to get changed files
+2. Agent reviews each file for:
+   - **CRITICAL**: Security vulnerabilities (hardcoded secrets, injection, XSS)
+   - **HIGH**: Code quality (large functions, missing error handling)
+   - **MEDIUM**: Best practices (mutation patterns, missing tests, a11y)
+3. Generates severity-ranked report with file locations and suggested fixes
+4. Blocks commit if CRITICAL/HIGH issues found
 
-**Security Issues (CRITICAL):**
-- Hardcoded credentials, API keys, tokens
-- SQL injection vulnerabilities
-- XSS vulnerabilities  
-- Missing input validation
-- Insecure dependencies
-- Path traversal risks
+## Related
 
-**Code Quality (HIGH):**
-- Functions > 50 lines
-- Files > 800 lines
-- Nesting depth > 4 levels
-- Missing error handling
-- console.log statements
-- TODO/FIXME comments
-- Missing JSDoc for public APIs
-
-**Best Practices (MEDIUM):**
-- Mutation patterns (use immutable instead)
-- Emoji usage in code/comments
-- Missing tests for new code
-- Accessibility issues (a11y)
-
-3. Generate report with:
-   - Severity: CRITICAL, HIGH, MEDIUM, LOW
-   - File location and line numbers
-   - Issue description
-   - Suggested fix
-
-4. Block commit if CRITICAL or HIGH issues found
-
-Never approve code with security vulnerabilities!
+- Agent: `code-reviewer`
+- For React-specific review: `/react-review`
+- For security-focused review: invoke `security-reviewer` agent

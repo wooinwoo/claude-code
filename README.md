@@ -25,7 +25,7 @@ wiw_claude-code/
 │   ├── rules/               ECC 규칙
 │   │   ├── common/          공통 (git-workflow, security, testing 등)
 │   │   └── typescript/      TypeScript 전용 (patterns, coding-style 등)
-│   ├── skills/              ECC 스킬 (13개: coding-standards, security-review 등)
+│   ├── skills/              ECC 스킬 (security-review, verification-loop, continuous-learning-v2 등)
 │   ├── hooks/               ECC 훅 설정
 │   ├── contexts/            ECC 컨텍스트 (dev, research, review)
 │   ├── scripts/             ECC 스크립트 (hooks, lib)
@@ -54,8 +54,7 @@ wiw_claude-code/
 │   ├── agents/
 │   │   ├── react-reviewer.md       React 코드 리뷰 에이전트
 │   │   ├── performance-reviewer.md 성능 전문가 에이전트 (Core Web Vitals, 번들, 렌더링)
-│   │   ├── next-build-resolver.md  Next.js 빌드 에러 해결 에이전트
-│   │   └── jira-analyzer.md        Jira 이슈 분석 에이전트
+│   │   └── next-build-resolver.md  Next.js 빌드 에러 해결 에이전트
 │   ├── commands/
 │   │   ├── react-review.md         /react-review 커맨드
 │   │   ├── react-test.md           /react-test 커맨드
@@ -202,7 +201,7 @@ my-project/
     │   ├── react-review.md          ← [stack]/commands/
     │   └── ...
     ├── skills/                            복사 (setup.ps1 재실행으로 갱신)
-    │   ├── coding-standards/        ← base/skills/
+    │   ├── security-review/         ← base/skills/
     │   ├── react-patterns/          ← [stack]/skills/
     │   └── ...
     ├── hooks/                      → junction → wiw/base/hooks/

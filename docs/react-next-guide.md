@@ -70,8 +70,7 @@ mindmap
     **문서**
       /update-docs
         doc-updater 에이전트
-      /update-codemaps
-        doc-updater 에이전트
+        "문서 + 코드맵 갱신"
     **학습 시스템**
       /learn
         continuous-learning 스킬
@@ -103,7 +102,6 @@ flowchart LR
         learn["/learn"]
         evolve["/evolve"]
         docs["/update-docs"]
-        maps["/update-codemaps"]
         commit["/commit"]
         verify["/verify"]
         jbug["/jira-bug"]
@@ -133,17 +131,12 @@ flowchart LR
     end
 
     subgraph skills["스킬 (지식 베이스)"]
-        s_tdd["tdd-workflow"]
         s_rp["react-patterns"]
         s_rt["react-testing"]
         s_rd["react-data-patterns"]
-        s_fp["frontend-patterns"]
-        s_cs["coding-standards"]
         s_sec["security-review"]
-        s_cl["continuous-learning"]
         s_cl2["continuous-learning-v2"]
         s_vl["verification-loop"]
-        s_pg["postgres-patterns"]
         s_eval["eval-harness"]
     end
 
@@ -157,14 +150,10 @@ flowchart LR
     rc --> a_rc
     e2e --> a_e2e
     docs --> a_doc
-    maps --> a_doc
-    learn --> s_cl
     evolve --> s_cl2
     sc --> s_cl2
 
-    a_tdd -.-> s_tdd
     a_rr -.-> s_rp & s_rt & s_rd
-    a_cr -.-> s_cs
     a_sec -.-> s_sec
     a_e2e -.-> s_vl
 

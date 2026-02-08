@@ -1,31 +1,21 @@
 # Update Documentation
 
-Sync documentation from source-of-truth:
+Invoke the **doc-updater** agent to sync documentation with source code.
 
-1. Read package.json scripts section
-   - Generate scripts reference table
-   - Include descriptions from comments
+## Capabilities
 
-2. Read .env.example
-   - Extract all environment variables
-   - Document purpose and format
+### Code Documentation
+- Read `package.json` scripts → generate scripts reference
+- Read `.env.example` → document env vars
+- Generate `docs/CONTRIB.md` (dev workflow, setup, testing)
+- Generate `docs/RUNBOOK.md` (deployment, monitoring, rollback)
 
-3. Generate docs/CONTRIB.md with:
-   - Development workflow
-   - Available scripts
-   - Environment setup
-   - Testing procedures
+### Architecture Maps
+- Scan source files for imports/exports/dependencies
+- Generate codemaps: `codemaps/architecture.md`, `backend.md`, `frontend.md`, `data.md`
+- Add freshness timestamps
+- Request approval if changes > 30%
 
-4. Generate docs/RUNBOOK.md with:
-   - Deployment procedures
-   - Monitoring and alerts
-   - Common issues and fixes
-   - Rollback procedures
+## Related
 
-5. Identify obsolete documentation:
-   - Find docs not modified in 90+ days
-   - List for manual review
-
-6. Show diff summary
-
-Single source of truth: package.json and .env.example
+- Agent: `doc-updater`
