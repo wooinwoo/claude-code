@@ -79,7 +79,7 @@ New-JunctionSafe "$rulesDir\wiw-common"       "$WiwRoot\common\rules"
 New-JunctionSafe "$rulesDir\wiw-stack"        "$WiwRoot\$Stack\rules"
 
 # ============================================================
-# agents/ - 파일 복사 (base + stack, 프로젝트 로컬 파일 보존)
+# agents/ - 파일 복사 (base + common + stack, 프로젝트 로컬 파일 보존)
 # ============================================================
 $agentsDir = Join-Path $claudeDir "agents"
 if (-not (Test-Path $agentsDir)) {
@@ -93,6 +93,12 @@ if (Test-Path $baseAgents) {
     Copy-Item "$baseAgents\*" $agentsDir -Recurse -Force
     $c = (Get-ChildItem $baseAgents -File).Count
     Write-Host "  [OK] base ($c files)" -ForegroundColor Green
+}
+$commonAgents = Join-Path $WiwRoot "common\agents"
+if (Test-Path $commonAgents) {
+    Copy-Item "$commonAgents\*" $agentsDir -Recurse -Force
+    $c = (Get-ChildItem $commonAgents -File).Count
+    Write-Host "  [OK] common ($c files)" -ForegroundColor Green
 }
 $stackAgents = Join-Path $WiwRoot "$Stack\agents"
 if (Test-Path $stackAgents) {
@@ -131,7 +137,7 @@ if (Test-Path $stackCmds) {
 }
 
 # ============================================================
-# skills/ - 파일 복사 (base + stack, 프로젝트 로컬 파일 보존)
+# skills/ - 파일 복사 (base + common + stack, 프로젝트 로컬 파일 보존)
 # ============================================================
 $skillsDir = Join-Path $claudeDir "skills"
 if (-not (Test-Path $skillsDir)) {
@@ -145,6 +151,12 @@ if (Test-Path $baseSkills) {
     Copy-Item "$baseSkills\*" $skillsDir -Recurse -Force
     $c = (Get-ChildItem $baseSkills -Directory).Count
     Write-Host "  [OK] base ($c skills)" -ForegroundColor Green
+}
+$commonSkills = Join-Path $WiwRoot "common\skills"
+if (Test-Path $commonSkills) {
+    Copy-Item "$commonSkills\*" $skillsDir -Recurse -Force
+    $c = (Get-ChildItem $commonSkills -Directory).Count
+    Write-Host "  [OK] common ($c skills)" -ForegroundColor Green
 }
 $stackSkills = Join-Path $WiwRoot "$Stack\skills"
 if (Test-Path $stackSkills) {
@@ -224,7 +236,7 @@ $junctionEntries = @(
 
 if (Test-Path $gitignore) {
     $existing = Get-Content $gitignore -Raw
-    if ($existing -notmatch "wiw_claude-code junctions") {
+    if ($existing -notmatch "wiw_claude-code") {
         $junctionEntries -join "`n" | Add-Content $gitignore
         Write-Host ""
         Write-Host "  [OK] .gitignore 업데이트" -ForegroundColor Green
@@ -243,9 +255,9 @@ Write-Host "=== setup 완료 ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "설치 내역:" -ForegroundColor White
 Write-Host "  rules/        junction (base + wiw-common + wiw-$Stack)" -ForegroundColor Gray
-Write-Host "  agents/       복사 (base + $Stack)" -ForegroundColor Gray
+Write-Host "  agents/       복사 (base + common + $Stack)" -ForegroundColor Gray
 Write-Host "  commands/     복사 (base + common + $Stack)" -ForegroundColor Gray
-Write-Host "  skills/       복사 (base + $Stack)" -ForegroundColor Gray
+Write-Host "  skills/       복사 (base + common + $Stack)" -ForegroundColor Gray
 Write-Host "  hooks/        junction (base)" -ForegroundColor Gray
 Write-Host "  contexts/     junction (base)" -ForegroundColor Gray
 Write-Host "  scripts-wiw/  junction (MCP 래퍼)" -ForegroundColor Gray
