@@ -10,7 +10,7 @@ rules/
 │   ├── coding-style.md
 │   ├── git-workflow.md
 │   ├── testing.md
-│   ├── performance.md
+│   ├── claude-usage.md
 │   ├── patterns.md
 │   ├── hooks.md
 │   ├── agents.md

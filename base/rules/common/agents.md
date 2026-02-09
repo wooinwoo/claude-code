@@ -15,6 +15,8 @@ Located in `~/.claude/agents/`:
 | e2e-runner | E2E testing | Critical user flows |
 | refactor-cleaner | Dead code cleanup | Code maintenance |
 | doc-updater | Documentation | Updating docs |
+| explorer | Codebase exploration | Bug investigation, root cause analysis |
+| database-reviewer | Database review | Schema design, query optimization |
 
 ## Immediate Agent Usage
 

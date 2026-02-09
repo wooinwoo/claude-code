@@ -11,7 +11,6 @@ mindmap
         "계획 → 확인 → 실행"
       /tdd
         tdd-guide 에이전트
-        tdd-workflow 스킬
         "RED → GREEN → REFACTOR"
       /commit
         "conventional commit 자동"
@@ -73,7 +72,6 @@ mindmap
         "문서 + 코드맵 갱신"
     **학습 시스템**
       /learn
-        continuous-learning 스킬
         "세션에서 패턴 추출"
       /skill-create
         "커스텀 스킬 생성"
@@ -313,7 +311,7 @@ flowchart LR
         r3["security: 보안 패턴 강제"]
         r4["testing: 테스트 규칙"]
         r5["patterns: 디자인 패턴"]
-        r6["performance: 성능 규칙"]
+        r6["claude-usage: 모델 선택 가이드"]
         r7["typescript/*: TS 전용 규칙"]
         r8["pull-request: PR 템플릿 (Jira 키)"]
         r9["jira: Jira 이슈 규칙"]

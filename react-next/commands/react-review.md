@@ -136,4 +136,4 @@ Running automated checks...
 ## Related
 
 - `agents/react-reviewer.md` -- The react-reviewer agent definition used by this command
-- `skills/frontend-patterns/` -- Approved React component and hook patterns for the project
+- `skills/react-patterns/` -- Approved React component and hook patterns for the project

@@ -464,4 +464,3 @@ export default defineConfig({
 ## Related
 
 - `skills/react-testing/` -- Testing philosophy and patterns reference
-- `skills/tdd-workflow/` -- General TDD workflow guidelines applicable across frameworks
