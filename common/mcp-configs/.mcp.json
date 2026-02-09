@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "mcp-atlassian": {
+      "command": "cmd",
+      "args": ["/c", "node", ".claude/scripts-wiw/run-jira-mcp.cjs"]
+    },
+    "github": {
+      "command": "cmd",
+      "args": ["/c", "node", ".claude/scripts-wiw/run-github-mcp.cjs"]
+    },
+    "context7": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp"]
+    },
+    "memory": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-memory"]
+    },
+    "figma-dev-mode-mcp-server": {
+      "type": "sse",
+      "url": "http://127.0.0.1:3845/sse"
+    },
+    "aws": {
+      "command": "cmd",
+      "args": ["/c", "uvx", "awslabs.core-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "wiw",
+        "AWS_REGION": "ap-northeast-2",
+        "FASTMCP_LOG_LEVEL": "WARNING"
+      }
+    },
+    "aws-api": {
+      "command": "cmd",
+      "args": ["/c", "uvx", "awslabs.aws-api-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "wiw",
+        "AWS_REGION": "ap-northeast-2",
+        "FASTMCP_LOG_LEVEL": "WARNING"
+      }
+    },
+    "playwright": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@playwright/mcp"]
+    },
+    "postgres": {
+      "command": "cmd",
+      "args": ["/c", "node", ".claude/scripts-wiw/run-db-mcp.cjs"]
+    }
+  }
+}

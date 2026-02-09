@@ -1,29 +1,56 @@
 ---
-description: React feature development pipeline. Auto-detects current phase from state file and continues.
+description: React feature pipeline with worktree isolation. Plan → Branch → Develop → Merge & PR.
 ---
 
 # Orchestrate — React/Next.js Pipeline
 
-단일 커맨드로 전체 개발 사이클을 관리합니다.
-`.orchestrate/state.json`으로 현재 단계를 추적하며, `/orchestrate`를 반복 호출하면 자동으로 다음 단계로 진행합니다.
+## Usage
 
-## Phase Detection
+```
+/orchestrate 상품 검색 페이지. 필터, 정렬, 무한스크롤.
+/orchestrate PROJ-123
+/orchestrate                → 현재 phase 감지 후 자동 진행
+```
 
-**먼저 `.orchestrate/state.json` 파일을 확인합니다.**
+## Pipeline Detection
 
-- 파일 없음 → **Phase 1: Start**
-- `"phase": "review"` → **Phase 2: Review**
-- `"phase": "impl"` → **Phase 3: Implement**
-- `"phase": "done"` → **Phase 4: Done**
-- `"phase": "complete"` → 이미 완료됨. 새로 시작하려면 `/orchestrate <새 기능>`
+**`.orchestrate/` 디렉토리의 `{slug}.json` 파일로 파이프라인을 추적합니다.**
 
-**인자가 있으면** (예: `/orchestrate 상품 검색 페이지`) 항상 Phase 1부터 시작합니다 (기존 state 덮어쓰기).
+여러 기능을 동시에 진행할 수 있습니다 (기능별 state 파일 분리).
+
+### 파이프라인 선택
+
+| 상황 | 동작 |
+|------|------|
+| `/orchestrate 검색 페이지` | 새 파이프라인 시작 → `.orchestrate/{slug}.json` 생성 |
+| `/orchestrate` + state 1개 | 그 파이프라인 이어감 |
+| `/orchestrate` + state 여러개 | 현재 브랜치(`git branch --show-current`)로 매칭. 못 찾으면 목록 → AskUserQuestion |
+| `/orchestrate` + state 0개 | "진행 중인 파이프라인 없음. 인자를 지정하세요." |
+
+### Phase 감지
+
+state 파일의 `phase` 값:
+
+- `"branch"` → **Phase 2: Branch**
+- `"develop"` → **Phase 3: Develop**
+- `"done"` → **Phase 4: PR**
+- `"pr"` → **Phase 5: Feedback**
+- `"complete"` → **Phase 6: Clean**
+
+```
+Phase 1: Plan     → 사용자와 플랜 협업 → 승인
+Phase 2: Branch   → 워크트리 + 브랜치 생성
+Phase 3: Develop  → 워크트리에서 구현
+Phase 4: PR       → 검증 → 커밋 → PR 생성
+Phase 5: Feedback → PR 코멘트 반영 (반복)
+Phase 6: Clean    → PR 병합 확인 → 워크트리/브랜치 삭제
+```
 
 ---
 
-## Phase 1: Start
+## Phase 1: Plan
 
-요구사항 확인 → 브랜치 생성 → 플랜 작성
+사용자와 함께 기능 플랜을 작성합니다.
 
 ### 1-1. Jira 확인
 
@@ -34,47 +61,35 @@ description: React feature development pipeline. Auto-detects current phase from
 - Standalone: Jira 없이 진행
 ```
 
-**이슈 있으면:** `mcp__jira__jira_get_issue`로 조회 → 이슈 생성 스킵
-
 ### 1-2. 요구사항 Q&A
 
-사용자와 인터뷰하여 다음을 명확히:
+AskUserQuestion으로 핵심을 명확히:
 
-- **목적과 사용자 가치** — 왜 이 기능이 필요한가?
-- **UI/UX 명세** — 어떤 화면? 어떤 인터랙션?
-- **데이터 흐름** — API 엔드포인트, 요청/응답 형태
-- **상태 관리** — 전역/로컬 상태, 캐싱 전략
-- **에러 처리** — 로딩, 에러, 빈 상태 UI
+- **목적과 사용자 가치**
+- **UI/UX 명세** — 화면, 인터랙션
+- **데이터 흐름** — API 엔드포인트, 요청/응답
+- **상태 관리** — 전역/로컬, 캐싱 전략
+- **에러/로딩/빈 상태** UI
 - **반응형** — 모바일/태블릿/데스크톱
 
 ### 1-3. Jira 이슈 생성 (필요시)
 
 > 이미 이슈가 있거나 standalone이면 스킵
 
-### 1-4. 브랜치 생성
-
-```bash
-# Jira 모드
-git checkout -b {JIRA-KEY}-{feature-slug}
-
-# Standalone 모드
-git checkout -b feature/{feature-slug}
-```
-
-### 1-5. 플랜 작성
+### 1-4. 플랜 작성
 
 `plans/{identifier}.md` 생성:
 
 ```markdown
-# Implementation Plan: {feature name}
+# {feature name}
 
 ## Tracking
-- Issue: {JIRA-KEY 또는 branch name}
+- Issue: {JIRA-KEY 또는 standalone}
 
-## Requirements Summary
+## Requirements
 {Q&A 결과 정리}
 
-## Component Architecture
+## Architecture
 
 ### Pages / Routes
 - [ ] {PageName} — {설명}
@@ -86,317 +101,303 @@ git checkout -b feature/{feature-slug}
 - [ ] {useHookName} — {목적}
 
 ### API Integration
-- [ ] {endpoint} — {method} {request/response}
+- [ ] {endpoint} — {method} {req/res}
 
-## Implementation Phases
-
-### Phase 1: 데이터 레이어
-1. API 타입 정의
-2. API 훅 구현 (SWR/TanStack Query)
-3. 상태 관리 설계
-
-### Phase 2: UI 컴포넌트
-4. 레이아웃 / 페이지 컴포넌트
-5. 공통 컴포넌트
-6. 인터랙션 컴포넌트
-
-### Phase 3: 통합 & 테스트
-7. 페이지에 컴포넌트 조립
-8. 에러/로딩 처리
-9. 테스트 작성
-
-## Parallel Agent Assignment
-
-| Agent | Scope | Files |
-|-------|-------|-------|
-| Agent 1 | Data Layer | API 타입, hooks, store |
-| Agent 2 | UI Components | 컴포넌트, 스타일 |
-| Agent 3 | Integration & Test | 페이지 조립, 테스트 |
+## Implementation Order
+1. API 타입 + hooks
+2. 공통 컴포넌트
+3. 페이지 컴포넌트 + 조립
+4. 에러/로딩 처리
+5. 테스트
 ```
+
+### 1-5. 사용자 승인
+
+**플랜을 보여주고 반드시 승인을 받습니다.**
+수정 요청 시 반영 후 재승인.
 
 ### 1-6. 상태 저장
 
-```bash
-mkdir -p .orchestrate
-```
-
-`.orchestrate/state.json` 작성:
+`.orchestrate/{slug}.json`:
 
 ```json
 {
-  "feature": "{feature name}",
-  "jira_key": "{JIRA-KEY or null}",
-  "branch": "{branch name}",
+  "feature": "{name}",
+  "jira_key": "{KEY or null}",
+  "branch": "{JIRA-KEY}-{slug} or feature/{slug}",
   "plan_file": "plans/{identifier}.md",
-  "phase": "review",
-  "started_at": "{ISO timestamp}"
+  "worktree": ".worktrees/{slug}",
+  "phase": "branch",
+  "started_at": "{ISO}"
 }
 ```
 
-### 1-7. 자동 진행
-
-사용자에게 알림:
-
 ```
-Phase 1 완료. 플랜이 작성되었습니다.
-→ /orchestrate 를 호출하면 Phase 2 (전문가 리뷰)로 진행합니다.
+Phase 1 완료. 플랜이 승인되었습니다.
+→ /orchestrate 를 호출하면 Phase 2 (워크트리 생성)로 진행합니다.
 ```
 
 ---
 
-## Phase 2: Review
+## Phase 2: Branch
 
-4명의 전문가 에이전트가 병렬로 플랜을 리뷰합니다.
+워크트리와 브랜치를 생성합니다.
 
-### 2-1. 플랜 파일 읽기
+### 2-1. Feature 브랜치 + 워크트리 생성
 
-`.orchestrate/state.json`에서 `plan_file` 경로를 읽어 플랜을 로드합니다.
-
-### 2-2. 4명의 전문가 병렬 리뷰
-
-Task tool로 4개 에이전트 동시 실행:
-
-**Agent 1 — React Patterns Expert** (`react-reviewer`):
-```
-Review the plan at {plan_file} for React best practices:
-1. Component 분리 적절성 (Single Responsibility)
-2. Hooks 사용 패턴 (커스텀 훅 추출 시점, 의존성 관리)
-3. Props drilling vs Context vs Store 선택
-4. Server Component vs Client Component 경계
-5. 접근성(a11y) 고려 여부
-6. 재사용 가능한 컴포넌트 식별
-7. 네이밍 컨벤션
-
-Report: [CRITICAL/HIGH/MEDIUM/LOW] Finding → Recommendation
+```bash
+# 브랜치 생성 + 워크트리로 체크아웃
+git worktree add .worktrees/{slug} -b {branch-name}
 ```
 
-**Agent 2 — Performance Expert** (`performance-reviewer`):
-```
-Review the plan at {plan_file} for performance concerns:
-1. 렌더링 최적화 전략 (memo, useMemo, useCallback 필요성)
-2. 코드 스플리팅 / dynamic import 기회
-3. 이미지 최적화 (next/image, lazy loading)
-4. 데이터 페칭 전략 (캐싱, 프리페칭, 워터폴 방지)
-5. 번들 사이즈 영향 (의존성 선택)
-6. Core Web Vitals 영향 (LCP, INP, CLS)
-7. 가상화 필요 여부 (대규모 리스트)
+### 2-2. 의존성 설치
 
-Report: [CRITICAL/HIGH/MEDIUM/LOW] Finding → Recommendation
+```bash
+cd .worktrees/{slug} && pnpm install
 ```
 
-**Agent 3 — Security Expert** (`security-reviewer`):
+### 2-3. 플랜 파일 복사
+
+워크트리에서도 플랜을 참조할 수 있도록:
+
+```bash
+cp -r plans/ .worktrees/{slug}/plans/
 ```
-Review the plan at {plan_file} for security concerns:
-1. XSS 방어 (dangerouslySetInnerHTML, URL 파라미터)
-2. 인증/인가 체크 (라우트 보호, API 호출 시)
-3. 민감 데이터 노출 (클라이언트 번들에 비밀 포함 여부)
-4. CSRF 방어 전략
-5. 입력 검증 (폼 데이터, 쿼리 파라미터)
-6. 의존성 보안 (known vulnerabilities)
-7. 환경변수 관리 (NEXT_PUBLIC_ prefix 주의)
-
-Report: [CRITICAL/HIGH/MEDIUM/LOW] Finding → Recommendation
-```
-
-**Agent 4 — Architecture Expert** (`architect`):
-```
-Review the plan at {plan_file} for architectural fitness:
-1. 폴더 구조 일관성 (기존 프로젝트 패턴 준수)
-2. 관심사 분리 (UI ↔ 로직 ↔ 데이터)
-3. 상태 관리 전략 적절성
-4. API 레이어 추상화 수준
-5. 에러 바운더리 전략
-6. 확장성 (기능 추가 시 변경 범위)
-7. 기존 코드와의 일관성
-
-Report: [CRITICAL/HIGH/MEDIUM/LOW] Finding → Recommendation
-```
-
-### 2-3. 리뷰 결과 종합 & 수정
-
-CRITICAL/HIGH 이슈가 있으면 플랜 파일을 수정합니다.
 
 ### 2-4. 상태 업데이트
 
-`.orchestrate/state.json`의 `phase`를 `"impl"`로 변경.
-
-### 2-5. 자동 진행
+phase → `"develop"`
 
 ```
-Phase 2 완료. 전문가 리뷰 결과:
-- React Patterns: {OK / N건 수정}
-- Performance: {OK / N건 수정}
-- Security: {OK / N건 수정}
-- Architecture: {OK / N건 수정}
-
-→ /orchestrate 를 호출하면 Phase 3 (병렬 구현)으로 진행합니다.
+Phase 2 완료. 워크트리가 생성되었습니다.
+→ 작업 디렉토리: .worktrees/{slug}/
+→ /orchestrate 를 호출하면 Phase 3 (구현)으로 진행합니다.
 ```
 
 ---
 
-## Phase 3: Implement
+## Phase 3: Develop
 
-승인된 플랜을 병렬 에이전트로 구현합니다.
+**워크트리 디렉토리에서** 플랜에 따라 구현합니다.
 
-### 3-1. 플랜 로드
+### 3-1. 작업 디렉토리 확인
 
-`.orchestrate/state.json`에서 `plan_file` 경로를 읽어 플랜을 로드합니다.
+state 파일에서 `worktree` 경로를 읽어 해당 디렉토리에서 작업합니다.
 
-### 3-2. Phase 1: 데이터 레이어 + UI 기초 (병렬)
+### 3-2. 구현
 
-**Agent 1 — Data Layer:**
-```
-Implement Phase 1 from {plan_file}:
-1. API 타입 정의 (TypeScript)
-2. API 훅 구현 (SWR 또는 TanStack Query)
-3. 상태 관리 (Context 또는 Store 설정)
-기존 프로젝트의 패턴을 따르세요.
-```
+플랜의 Implementation Order에 따라 순차 구현:
 
-**Agent 2 — UI Components:**
-```
-Implement Phase 2 from {plan_file}:
-1. 공통 컴포넌트 (Props 타입, 스타일링, a11y)
-2. 페이지 컴포넌트 (레이아웃, 로딩/에러/빈 상태 UI, 반응형)
-기존 프로젝트의 컴포넌트 패턴을 따르세요.
-Server/Client Component 경계를 명확히 하세요.
-```
+1. **API 타입 + hooks** — TypeScript 타입, SWR/TanStack Query hooks
+2. **공통 컴포넌트** — Props 타입, 스타일링, a11y
+3. **페이지 컴포넌트** — 레이아웃, Server/Client 경계, 반응형
+4. **에러/로딩 처리** — 에러 바운더리, Suspense, 빈 상태
+5. **테스트** — RTL 컴포넌트 테스트, hook 테스트
 
-### 3-3. Phase 2: 통합 + 테스트 (Phase 1 완료 후)
+> 독립적인 작업이면 Task tool로 병렬 실행 가능.
+> 단, 파일 충돌이 없도록 scope를 명확히 분리.
 
-**Agent 3 — Integration & Test:**
-```
-Implement Phase 3 from {plan_file}:
-1. 페이지 조립 (컴포넌트 + 데이터 훅 연결, 라우팅, 에러 바운더리)
-2. 테스트 작성 (RTL 컴포넌트 테스트, renderHook, 인터랙션 테스트)
-```
-
-### 3-4. 통합 검증
+### 3-3. 워크트리 내 검증
 
 ```bash
+cd .worktrees/{slug}
 pnpm lint
 pnpm build
 pnpm test
 ```
 
-빌드 실패 시 "빌드 에러 고쳐줘"로 수정.
+실패 시 수정 후 재실행.
 
-### 3-5. 상태 업데이트
+### 3-4. 상태 업데이트
 
-`.orchestrate/state.json`의 `phase`를 `"done"`으로 변경.
-
-### 3-6. 자동 진행
+phase → `"done"`
 
 ```
 Phase 3 완료. 구현이 완료되었습니다.
 - Build: {pass/fail}
 - Test: {N/N pass}
-
 → /orchestrate 를 호출하면 Phase 4 (검증 + PR)로 진행합니다.
 ```
 
 ---
 
-## Phase 4: Done
+## Phase 4: PR
 
-검증, 리뷰, PR 생성을 수행합니다.
+검증 후 PR을 생성합니다.
 
-### 4-1. 검증 루프
+### 4-1. 워크트리에서 검증 루프
 
-모든 체크가 통과할 때까지 반복. **루프를 빠져나오기 전에 4-2로 가지 마세요.**
+```bash
+cd .worktrees/{slug}
+```
 
 ```
 LOOP (max 3):
   1. pnpm lint --fix
-  2. pnpm build          → 실패 시: 빌드 에러 수정, LOOP 재시작
-  3. pnpm test           → 실패 시: 원인 분석 후 수정, LOOP 재시작
-  4. All green → EXIT LOOP
+  2. pnpm build       → 실패 시 수정, 재시작
+  3. pnpm test        → 실패 시 수정, 재시작
+  4. All green → EXIT
 ```
 
-3회 후에도 실패하면 사용자에게 보고하고 중단합니다.
+3회 실패 시 사용자에게 보고 후 중단.
 
-### 4-2. 전문가 리뷰 (병렬)
-
-3개 에이전트 동시 실행:
-
-- **react-reviewer**: Hooks 규칙, Component 패턴, Props 타입, a11y
-- **performance-reviewer**: 불필요한 re-render, 번들 사이즈, 데이터 페칭
-- **security-reviewer**: XSS, 인증/인가, 민감 데이터, 입력 검증
-
-CRITICAL/HIGH 이슈 발견 시 수정 후 **검증 루프(4-1) 재실행**.
-
-### 4-3. Commit
+### 4-2. 커밋
 
 ```bash
 git add {specific files}
-git commit -m "$(cat <<'EOF'
-feat({scope}): {description}
-
-- {change 1}
-- {change 2}
-
-JIRA: {JIRA-KEY}
-EOF
-)"
+git commit -m "{type}({scope}): {description}"
 ```
 
-Standalone 모드: JIRA 줄 생략
-
-### 4-4. PR 생성
+### 4-3. PR 생성
 
 ```bash
 git push -u origin {branch}
 
-gh pr create --title "{type}({scope}): {description} {JIRA-KEY}" --body "$(cat <<'EOF'
+gh pr create --title "{type}({scope}): {description}" --body "$(cat <<'EOF'
 ## Summary
-{what was built and why}
+{what and why}
 
 ## Changes
 - {change 1}
 - {change 2}
 
 ## Test
-- [x] Unit tests added
 - [x] Build passes
-- [x] Lint passes
-
-## Review Notes
-- React Patterns: OK
-- Performance: OK
-- Security: OK
+- [x] Tests pass
 EOF
 )"
 ```
 
-### 4-5. Jira 상태 변경 (Jira 모드)
+### 4-4. Jira 상태 변경 (Jira 모드)
 
 ```typescript
 mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "In Review" })
 ```
 
-### 4-6. 상태 업데이트
+### 4-5. 상태 업데이트
 
-`.orchestrate/state.json`의 `phase`를 `"complete"`로 변경.
+phase → `"pr"`, state에 `"pr_url"` 추가.
 
-### 4-7. 완료 보고
+```
+Phase 4 완료. PR이 생성되었습니다.
+- PR: {URL}
+- Branch: {branch} → main
 
-```markdown
-## Development Complete
+→ 리뷰 코멘트가 달리면 /orchestrate 를 호출하세요.
+```
 
-### Verification
-- Lint: pass
-- Build: pass
-- Test: {N/N} pass
+---
 
-### Expert Reviews
-- React Patterns: no issues
-- Performance: no issues
-- Security: no issues
+## Phase 5: Feedback
 
-### Pull Request
-- **URL**: {PR URL}
-- **Title**: feat({scope}): {description} {JIRA-KEY}
-- **Branch**: {branch} → main
+PR 리뷰 코멘트를 확인하고 반영합니다. **이 phase는 반복됩니다.**
+
+### 5-1. PR 상태 확인
+
+```bash
+gh pr view {branch} --json state,reviews,comments,reviewRequests
+```
+
+| 상태 | 행동 |
+|------|------|
+| `MERGED` | → Phase 6 (Clean)으로 자동 전환 |
+| `OPEN` + 코멘트 없음 | → "리뷰 대기 중. 코멘트가 달리면 다시 호출하세요." |
+| `OPEN` + 코멘트 있음 | → 아래 5-2~5-5 실행 |
+| `CLOSED` | → "PR이 닫혔습니다. 상태를 확인하세요." |
+
+### 5-2. 리뷰 코멘트 읽기
+
+```bash
+gh api repos/{owner}/{repo}/pulls/{pr_number}/comments --jq '.[] | {path, line, body, user: .user.login}'
+gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --jq '.[] | {state, body, user: .user.login}'
+```
+
+코멘트를 분류:
+- **변경 요청** (request changes) → 반드시 반영
+- **제안** (suggestion) → 타당하면 반영
+- **질문** (question) → 코드에 주석 또는 PR 답글
+
+### 5-3. 워크트리에서 수정
+
+```bash
+cd .worktrees/{slug}
+# 코멘트 내용에 따라 수정
+```
+
+### 5-4. 검증 + push
+
+```bash
+pnpm lint --fix && pnpm build && pnpm test
+git add {modified files}
+git commit -m "fix({scope}): address review feedback"
+git push
+```
+
+### 5-5. 상태 유지
+
+phase는 `"pr"` 그대로 유지. (다음 리뷰까지 반복 가능)
+
+```
+리뷰 피드백 반영 완료. push 했습니다.
+- 수정 항목: {N}건
+- 리뷰어에게 re-review 요청하세요.
+
+→ 추가 코멘트가 달리면 /orchestrate 를 다시 호출하세요.
+→ PR이 병합되면 /orchestrate 로 정리합니다.
+```
+
+---
+
+## Phase 6: Clean
+
+PR 병합 확인 후 워크트리와 브랜치를 정리합니다.
+
+> Phase 5에서 PR이 MERGED로 감지되면 자동으로 이 phase를 실행합니다.
+
+### 6-1. main 브랜치 업데이트
+
+```bash
+cd {project-root}
+git checkout main
+git pull origin main
+```
+
+### 6-2. 워크트리 삭제
+
+```bash
+git worktree remove .worktrees/{slug}
+```
+
+### 6-3. 브랜치 삭제
+
+```bash
+# 로컬
+git branch -d {branch}
+
+# 리모트 (이미 삭제됐으면 스킵)
+git push origin --delete {branch} 2>/dev/null || true
+```
+
+### 6-4. state 파일 정리
+
+```bash
+rm .orchestrate/{slug}.json
+```
+
+### 6-5. Jira 상태 변경 (Jira 모드)
+
+```typescript
+mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "Done" })
+```
+
+### 6-6. 완료
+
+```
+정리 완료.
+- 워크트리: .worktrees/{slug} 삭제됨
+- 브랜치: {branch} 삭제됨 (local + remote)
+- Jira: {JIRA-KEY} → Done
+- main: 최신 상태로 업데이트됨
 ```
 
 ---
@@ -404,9 +405,9 @@ mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "In Revi
 ## Examples
 
 ```
-/orchestrate 상품 검색 페이지 만들어야 해. 필터링, 정렬, 무한스크롤.
+/orchestrate 상품 검색 페이지. 필터링, 정렬, 무한스크롤.
 ```
-→ Phase 1 시작 (Jira 확인 → Q&A → 브랜치 → 플랜)
+→ Phase 1: 사용자와 플랜 협업
 
 ```
 /orchestrate

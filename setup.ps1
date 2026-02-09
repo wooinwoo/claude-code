@@ -175,12 +175,21 @@ New-JunctionSafe "$claudeDir\contexts"         "$WiwRoot\base\contexts"
 New-JunctionSafe "$claudeDir\scripts"          "$WiwRoot\base\scripts"
 
 # ============================================================
-# MCP 관련 - scripts-wiw(MCP 래퍼), mcp-configs(서버 설정 템플릿)
+# MCP 관련 - scripts-wiw(MCP 래퍼), .mcp.json(서버 설정)
 # ============================================================
 Write-Host ""
-Write-Host "[MCP] junction 생성" -ForegroundColor White
+Write-Host "[MCP] 설정" -ForegroundColor White
 New-JunctionSafe "$claudeDir\scripts-wiw"      "$WiwRoot\common\scripts"
-New-JunctionSafe "$claudeDir\mcp-configs"      "$WiwRoot\common\mcp-configs"
+
+# .mcp.json 복사 (없을 때만)
+$mcpJson = Join-Path $ProjectPath ".mcp.json"
+$mcpTemplate = Join-Path $WiwRoot "common\mcp-configs\.mcp.json"
+if (-not (Test-Path $mcpJson) -and (Test-Path $mcpTemplate)) {
+    Copy-Item $mcpTemplate $mcpJson
+    Write-Host "  [NEW] .mcp.json 생성 (필요 없는 서버는 제거하세요)" -ForegroundColor Yellow
+} else {
+    Write-Host "  [SKIP] .mcp.json 이미 존재" -ForegroundColor Gray
+}
 
 # .env 파일 안내 (.env.example 복사)
 $envFile = Join-Path $claudeDir ".env"
@@ -229,7 +238,6 @@ $junctionEntries = @(
     ".claude/contexts"
     ".claude/scripts"
     ".claude/scripts-wiw"
-    ".claude/mcp-configs"
     ".claude/.env"
     ".claude/.wiw-stack"
 )
@@ -261,12 +269,12 @@ Write-Host "  skills/       복사 (base + common + $Stack)" -ForegroundColor Gr
 Write-Host "  hooks/        junction (base)" -ForegroundColor Gray
 Write-Host "  contexts/     junction (base)" -ForegroundColor Gray
 Write-Host "  scripts-wiw/  junction (MCP 래퍼)" -ForegroundColor Gray
-Write-Host "  mcp-configs/  junction (MCP 설정)" -ForegroundColor Gray
+Write-Host "  .mcp.json     복사 (MCP 서버 설정)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "다음 단계:" -ForegroundColor White
 Write-Host "  1. CLAUDE.md에 프로젝트 설명 작성" -ForegroundColor Gray
 Write-Host "  2. .claude/rules/project.md 에 프로젝트 전용 규칙 추가 (선택)" -ForegroundColor Gray
-Write-Host "  3. .claude/.env 에 토큰 입력 (GitHub PAT, Jira Token)" -ForegroundColor Gray
-Write-Host "  4. mcp-configs -> settings.local.json 복사" -ForegroundColor Gray
+Write-Host "  3. .claude/.env 에 토큰 입력 (GitHub PAT, Jira Token, DATABASE_URL)" -ForegroundColor Gray
+Write-Host "  4. .mcp.json 에서 필요 없는 MCP 서버 제거" -ForegroundColor Gray
 Write-Host ""
 Write-Host "wiw_claude-code 업데이트 후 setup.ps1 재실행하면 반영됩니다." -ForegroundColor DarkGray
