@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * PostgreSQL MCP 서버 실행 래퍼
+ * MySQL MCP 서버 실행 래퍼
  * .claude/.env 에서 DATABASE_URL 읽어서 실행합니다.
  *
- * 사용법: .claude/.env 에 DATABASE_URL=postgresql://user:pass@host:5432/dbname 설정
+ * 사용법: .claude/.env 에 DATABASE_URL=mysql://user:pass@host:3306/dbname 설정
  */
 const fs = require("fs");
 const path = require("path");
@@ -29,7 +29,7 @@ if (!databaseUrl) {
 const { spawn } = require("child_process");
 const child = spawn(
   "npx",
-  ["-y", "@modelcontextprotocol/server-postgres", databaseUrl],
+  ["-y", "@benborla29/mcp-server-mysql", "--db-url", databaseUrl],
   {
     stdio: "inherit",
     shell: true,

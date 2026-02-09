@@ -42,7 +42,7 @@
       "command": "cmd",
       "args": ["/c", "npx", "-y", "@playwright/mcp"]
     },
-    "postgres": {
+    "mysql": {
       "command": "cmd",
       "args": ["/c", "node", ".claude/scripts-wiw/run-db-mcp.cjs"]
     }

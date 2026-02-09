@@ -3,10 +3,8 @@
     프로젝트에 .claude 설정을 설치
 
 .DESCRIPTION
-    base/ + common/ + [stack]/ 을 프로젝트의 .claude/ 하위에 설치합니다.
-    - rules/          junction (자동 반영)
-    - agents/commands/skills/  파일 복사 (업데이트 시 재실행 필요)
-    - hooks/contexts/scripts/  junction (자동 반영)
+    base/ + common/ + [stack]/ 을 프로젝트의 .claude/ 하위에 파일 복사로 설치합니다.
+    모든 항목은 파일 복사이므로, 업데이트 시 setup.ps1 재실행이 필요합니다.
 
 .EXAMPLE
     .\setup.ps1 react-next C:\my-react-project
@@ -49,139 +47,180 @@ if (-not (Test-Path $claudeDir)) {
 $Stack | Out-File (Join-Path $claudeDir ".wiw-stack") -Encoding utf8 -NoNewline
 
 # ============================================================
-# rules/ - 하위 디렉토리 junction (자동 로딩 지원)
+# 공통 복사 함수
+# ============================================================
+function Copy-LayerDir {
+    param(
+        [string]$TargetDir,
+        [string]$Label,
+        [string[]]$Sources,
+        [switch]$Recurse,
+        [switch]$CountDirs
+    )
+
+    if (-not (Test-Path $TargetDir)) {
+        New-Item -ItemType Directory -Path $TargetDir | Out-Null
+    }
+
+    Write-Host ""
+    Write-Host "[$Label] 복사" -ForegroundColor White
+    foreach ($src in $Sources) {
+        if (-not (Test-Path $src)) { continue }
+        Copy-Item "$src\*" $TargetDir -Recurse -Force
+        if ($CountDirs) {
+            $c = (Get-ChildItem $src -Directory).Count
+            $layerName = Split-Path (Split-Path $src -Parent) -Leaf
+            Write-Host "  [OK] $layerName ($c items)" -ForegroundColor Green
+        } else {
+            $c = if ($Recurse) { (Get-ChildItem $src -Recurse -File).Count } else { (Get-ChildItem $src -File).Count }
+            $layerName = Split-Path (Split-Path $src -Parent) -Leaf
+            Write-Host "  [OK] $layerName ($c files)" -ForegroundColor Green
+        }
+    }
+}
+
+# ============================================================
+# rules/ - 서브디렉토리별 복사 (base/common/stack 레이어 구분 유지)
 # ============================================================
 $rulesDir = Join-Path $claudeDir "rules"
 if (-not (Test-Path $rulesDir)) {
     New-Item -ItemType Directory -Path $rulesDir | Out-Null
 }
 
-function New-JunctionSafe {
-    param([string]$Link, [string]$Target)
+Write-Host "[rules/] 복사" -ForegroundColor White
 
-    if (-not (Test-Path $Target)) {
-        Write-Host "  [SKIP] $Target (not found)" -ForegroundColor Yellow
-        return
+$rulesSources = @(
+    @{ Name = "base-common";    Path = "$WiwRoot\base\rules\common" },
+    @{ Name = "base-typescript"; Path = "$WiwRoot\base\rules\typescript" },
+    @{ Name = "wiw-common";     Path = "$WiwRoot\common\rules" },
+    @{ Name = "wiw-stack";      Path = "$WiwRoot\$Stack\rules" }
+)
+
+foreach ($rule in $rulesSources) {
+    if (-not (Test-Path $rule.Path)) { continue }
+    $dest = Join-Path $rulesDir $rule.Name
+    if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+    Copy-Item $rule.Path $dest -Recurse -Force
+    $c = (Get-ChildItem $rule.Path -File -Recurse).Count
+    Write-Host "  [OK] $($rule.Name) ($c files)" -ForegroundColor Green
+}
+
+# ============================================================
+# agents/ - 파일 복사 (base + common + stack)
+# ============================================================
+Copy-LayerDir `
+    -TargetDir (Join-Path $claudeDir "agents") `
+    -Label "agents/" `
+    -Sources @(
+        "$WiwRoot\base\agents",
+        "$WiwRoot\common\agents",
+        "$WiwRoot\$Stack\agents"
+    )
+
+# ============================================================
+# commands/ - 파일 복사 (base + common + stack)
+# ============================================================
+Copy-LayerDir `
+    -TargetDir (Join-Path $claudeDir "commands") `
+    -Label "commands/" `
+    -Sources @(
+        "$WiwRoot\base\commands",
+        "$WiwRoot\common\commands",
+        "$WiwRoot\$Stack\commands"
+    ) -Recurse
+
+# ============================================================
+# skills/ - 파일 복사 (base + common + stack)
+# ============================================================
+Copy-LayerDir `
+    -TargetDir (Join-Path $claudeDir "skills") `
+    -Label "skills/" `
+    -Sources @(
+        "$WiwRoot\base\skills",
+        "$WiwRoot\common\skills",
+        "$WiwRoot\$Stack\skills"
+    ) -CountDirs
+
+# ============================================================
+# hooks/ - 파일 복사 (base)
+# ============================================================
+$hooksDir = Join-Path $claudeDir "hooks"
+if (Test-Path $hooksDir) {
+    # 기존 junction이면 제거
+    $item = Get-Item $hooksDir -Force -ErrorAction SilentlyContinue
+    if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        cmd /c rmdir "$hooksDir" 2>$null
     }
-    if (Test-Path $Link) {
-        # 기존 junction 제거
-        cmd /c rmdir "$Link" 2>$null
-        Remove-Item $Link -Force -ErrorAction SilentlyContinue
+}
+Copy-LayerDir `
+    -TargetDir $hooksDir `
+    -Label "hooks/" `
+    -Sources @("$WiwRoot\base\hooks") -Recurse
+
+# ============================================================
+# contexts/ - 파일 복사 (base)
+# ============================================================
+$contextsDir = Join-Path $claudeDir "contexts"
+if (Test-Path $contextsDir) {
+    $item = Get-Item $contextsDir -Force -ErrorAction SilentlyContinue
+    if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        cmd /c rmdir "$contextsDir" 2>$null
     }
-    cmd /c mklink /J "$Link" "$Target" | Out-Null
-    Write-Host "  [OK] $Link -> $Target" -ForegroundColor Green
 }
-
-Write-Host "[rules/] junction 생성" -ForegroundColor White
-New-JunctionSafe "$rulesDir\base-common"     "$WiwRoot\base\rules\common"
-New-JunctionSafe "$rulesDir\base-typescript"  "$WiwRoot\base\rules\typescript"
-New-JunctionSafe "$rulesDir\wiw-common"       "$WiwRoot\common\rules"
-New-JunctionSafe "$rulesDir\wiw-stack"        "$WiwRoot\$Stack\rules"
+Copy-LayerDir `
+    -TargetDir $contextsDir `
+    -Label "contexts/" `
+    -Sources @("$WiwRoot\base\contexts") -Recurse
 
 # ============================================================
-# agents/ - 파일 복사 (base + common + stack, 프로젝트 로컬 파일 보존)
+# scripts/ - 파일 복사 (base: hook 스크립트)
 # ============================================================
-$agentsDir = Join-Path $claudeDir "agents"
-if (-not (Test-Path $agentsDir)) {
-    New-Item -ItemType Directory -Path $agentsDir | Out-Null
+$scriptsDir = Join-Path $claudeDir "scripts"
+if (Test-Path $scriptsDir) {
+    $item = Get-Item $scriptsDir -Force -ErrorAction SilentlyContinue
+    if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        cmd /c rmdir "$scriptsDir" 2>$null
+    }
 }
-
-Write-Host ""
-Write-Host "[agents/] 복사" -ForegroundColor White
-$baseAgents = Join-Path $WiwRoot "base\agents"
-if (Test-Path $baseAgents) {
-    Copy-Item "$baseAgents\*" $agentsDir -Recurse -Force
-    $c = (Get-ChildItem $baseAgents -File).Count
-    Write-Host "  [OK] base ($c files)" -ForegroundColor Green
-}
-$commonAgents = Join-Path $WiwRoot "common\agents"
-if (Test-Path $commonAgents) {
-    Copy-Item "$commonAgents\*" $agentsDir -Recurse -Force
-    $c = (Get-ChildItem $commonAgents -File).Count
-    Write-Host "  [OK] common ($c files)" -ForegroundColor Green
-}
-$stackAgents = Join-Path $WiwRoot "$Stack\agents"
-if (Test-Path $stackAgents) {
-    Copy-Item "$stackAgents\*" $agentsDir -Recurse -Force
-    $c = (Get-ChildItem $stackAgents -File).Count
-    Write-Host "  [OK] $Stack ($c files)" -ForegroundColor Green
-}
+Copy-LayerDir `
+    -TargetDir $scriptsDir `
+    -Label "scripts/" `
+    -Sources @("$WiwRoot\base\scripts") -Recurse
 
 # ============================================================
-# commands/ - 파일 복사 (base + common + stack, 프로젝트 로컬 파일 보존)
+# scripts-wiw/ - 파일 복사 (common: MCP 래퍼 스크립트)
 # ============================================================
-$commandsDir = Join-Path $claudeDir "commands"
-if (-not (Test-Path $commandsDir)) {
-    New-Item -ItemType Directory -Path $commandsDir | Out-Null
+$scriptsWiwDir = Join-Path $claudeDir "scripts-wiw"
+if (Test-Path $scriptsWiwDir) {
+    $item = Get-Item $scriptsWiwDir -Force -ErrorAction SilentlyContinue
+    if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        cmd /c rmdir "$scriptsWiwDir" 2>$null
+    }
 }
-
-Write-Host ""
-Write-Host "[commands/] 복사" -ForegroundColor White
-$baseCmds = Join-Path $WiwRoot "base\commands"
-if (Test-Path $baseCmds) {
-    Copy-Item "$baseCmds\*" $commandsDir -Recurse -Force
-    $c = (Get-ChildItem $baseCmds -File).Count
-    Write-Host "  [OK] base ($c files)" -ForegroundColor Green
-}
-$commonCmds = Join-Path $WiwRoot "common\commands"
-if (Test-Path $commonCmds) {
-    Copy-Item "$commonCmds\*" $commandsDir -Recurse -Force
-    $c = (Get-ChildItem $commonCmds -Recurse -File).Count
-    Write-Host "  [OK] common ($c files)" -ForegroundColor Green
-}
-$stackCmds = Join-Path $WiwRoot "$Stack\commands"
-if (Test-Path $stackCmds) {
-    Copy-Item "$stackCmds\*" $commandsDir -Recurse -Force
-    $c = (Get-ChildItem $stackCmds -Recurse -File).Count
-    Write-Host "  [OK] $Stack ($c files)" -ForegroundColor Green
-}
+Copy-LayerDir `
+    -TargetDir $scriptsWiwDir `
+    -Label "scripts-wiw/" `
+    -Sources @("$WiwRoot\common\scripts") -Recurse
 
 # ============================================================
-# skills/ - 파일 복사 (base + common + stack, 프로젝트 로컬 파일 보존)
-# ============================================================
-$skillsDir = Join-Path $claudeDir "skills"
-if (-not (Test-Path $skillsDir)) {
-    New-Item -ItemType Directory -Path $skillsDir | Out-Null
-}
-
-Write-Host ""
-Write-Host "[skills/] 복사" -ForegroundColor White
-$baseSkills = Join-Path $WiwRoot "base\skills"
-if (Test-Path $baseSkills) {
-    Copy-Item "$baseSkills\*" $skillsDir -Recurse -Force
-    $c = (Get-ChildItem $baseSkills -Directory).Count
-    Write-Host "  [OK] base ($c skills)" -ForegroundColor Green
-}
-$commonSkills = Join-Path $WiwRoot "common\skills"
-if (Test-Path $commonSkills) {
-    Copy-Item "$commonSkills\*" $skillsDir -Recurse -Force
-    $c = (Get-ChildItem $commonSkills -Directory).Count
-    Write-Host "  [OK] common ($c skills)" -ForegroundColor Green
-}
-$stackSkills = Join-Path $WiwRoot "$Stack\skills"
-if (Test-Path $stackSkills) {
-    Copy-Item "$stackSkills\*" $skillsDir -Recurse -Force
-    $c = (Get-ChildItem $stackSkills -Directory).Count
-    Write-Host "  [OK] $Stack ($c skills)" -ForegroundColor Green
-}
-
-# ============================================================
-# hooks/, contexts/, scripts/ - base 그대로
+# settings.json — 권한 설정 (없을 때만)
 # ============================================================
 Write-Host ""
-Write-Host "[기타] junction 생성" -ForegroundColor White
-New-JunctionSafe "$claudeDir\hooks"            "$WiwRoot\base\hooks"
-New-JunctionSafe "$claudeDir\contexts"         "$WiwRoot\base\contexts"
-New-JunctionSafe "$claudeDir\scripts"          "$WiwRoot\base\scripts"
+Write-Host "[settings] 권한 설정" -ForegroundColor White
+$settingsJson = Join-Path $claudeDir "settings.json"
+$settingsTemplate = Join-Path $WiwRoot "common\settings.json"
+if (-not (Test-Path $settingsJson) -and (Test-Path $settingsTemplate)) {
+    Copy-Item $settingsTemplate $settingsJson
+    Write-Host "  [NEW] settings.json 생성 (Bash 권한 사전 허용)" -ForegroundColor Yellow
+} else {
+    Write-Host "  [SKIP] settings.json 이미 존재" -ForegroundColor Gray
+}
 
 # ============================================================
-# MCP 관련 - scripts-wiw(MCP 래퍼), .mcp.json(서버 설정)
+# .mcp.json 복사 (없을 때만)
 # ============================================================
 Write-Host ""
 Write-Host "[MCP] 설정" -ForegroundColor White
-New-JunctionSafe "$claudeDir\scripts-wiw"      "$WiwRoot\common\scripts"
-
-# .mcp.json 복사 (없을 때만)
 $mcpJson = Join-Path $ProjectPath ".mcp.json"
 $mcpTemplate = Join-Path $WiwRoot "common\mcp-configs\.mcp.json"
 if (-not (Test-Path $mcpJson) -and (Test-Path $mcpTemplate)) {
@@ -197,6 +236,13 @@ $envExample = Join-Path $WiwRoot "common\.env.example"
 if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
     Copy-Item $envExample $envFile
     Write-Host "  [NEW] .claude/.env 생성 (토큰을 직접 입력하세요)" -ForegroundColor Yellow
+} elseif (Test-Path $envFile) {
+    # 기존 .env에 CLAUDE_PLUGIN_ROOT 없으면 추가
+    $envContent = Get-Content $envFile -Raw
+    if ($envContent -notmatch "CLAUDE_PLUGIN_ROOT") {
+        Add-Content $envFile "`n# hooks/scripts 경로 (변경하지 마세요)`nCLAUDE_PLUGIN_ROOT=.claude"
+        Write-Host "  [OK] .env에 CLAUDE_PLUGIN_ROOT 추가" -ForegroundColor Green
+    }
 }
 
 # ============================================================
@@ -227,17 +273,11 @@ if (-not (Test-Path $claudeMd)) {
 }
 
 # ============================================================
-# .gitignore 에 junction 경로 추가
+# .gitignore 에 관리 항목 추가
 # ============================================================
 $gitignore = Join-Path $ProjectPath ".gitignore"
-$junctionEntries = @(
+$ignoreEntries = @(
     "# wiw_claude-code (setup.ps1로 관리)"
-    ".claude/rules/base-*"
-    ".claude/rules/wiw-*"
-    ".claude/hooks"
-    ".claude/contexts"
-    ".claude/scripts"
-    ".claude/scripts-wiw"
     ".claude/.env"
     ".claude/.wiw-stack"
 )
@@ -245,12 +285,12 @@ $junctionEntries = @(
 if (Test-Path $gitignore) {
     $existing = Get-Content $gitignore -Raw
     if ($existing -notmatch "wiw_claude-code") {
-        $junctionEntries -join "`n" | Add-Content $gitignore
+        $ignoreEntries -join "`n" | Add-Content $gitignore
         Write-Host ""
         Write-Host "  [OK] .gitignore 업데이트" -ForegroundColor Green
     }
 } else {
-    $junctionEntries -join "`n" | Out-File $gitignore -Encoding utf8
+    $ignoreEntries -join "`n" | Out-File $gitignore -Encoding utf8
     Write-Host ""
     Write-Host "  [NEW] .gitignore 생성" -ForegroundColor Green
 }
@@ -261,15 +301,15 @@ if (Test-Path $gitignore) {
 Write-Host ""
 Write-Host "=== setup 완료 ===" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "설치 내역:" -ForegroundColor White
-Write-Host "  rules/        junction (base + wiw-common + wiw-$Stack)" -ForegroundColor Gray
-Write-Host "  agents/       복사 (base + common + $Stack)" -ForegroundColor Gray
-Write-Host "  commands/     복사 (base + common + $Stack)" -ForegroundColor Gray
-Write-Host "  skills/       복사 (base + common + $Stack)" -ForegroundColor Gray
-Write-Host "  hooks/        junction (base)" -ForegroundColor Gray
-Write-Host "  contexts/     junction (base)" -ForegroundColor Gray
-Write-Host "  scripts-wiw/  junction (MCP 래퍼)" -ForegroundColor Gray
-Write-Host "  .mcp.json     복사 (MCP 서버 설정)" -ForegroundColor Gray
+Write-Host "설치 내역 (모두 파일 복사):" -ForegroundColor White
+Write-Host "  rules/        base + wiw-common + wiw-$Stack" -ForegroundColor Gray
+Write-Host "  agents/       base + common + $Stack" -ForegroundColor Gray
+Write-Host "  commands/     base + common + $Stack" -ForegroundColor Gray
+Write-Host "  skills/       base + common + $Stack" -ForegroundColor Gray
+Write-Host "  hooks/        base" -ForegroundColor Gray
+Write-Host "  scripts/      base (hook 스크립트)" -ForegroundColor Gray
+Write-Host "  scripts-wiw/  common (MCP 래퍼)" -ForegroundColor Gray
+Write-Host "  .mcp.json     MCP 서버 설정" -ForegroundColor Gray
 Write-Host ""
 Write-Host "다음 단계:" -ForegroundColor White
 Write-Host "  1. CLAUDE.md에 프로젝트 설명 작성" -ForegroundColor Gray
