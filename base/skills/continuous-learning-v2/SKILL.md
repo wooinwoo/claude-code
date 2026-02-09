@@ -152,20 +152,23 @@ touch ~/.claude/homunculus/observations.jsonl
 ### 3. Use the Instinct Commands
 
 ```bash
-/instinct-status     # Show learned instincts with confidence scores
-/evolve              # Cluster related instincts into skills/commands
-/instinct-export     # Export instincts for sharing
-/instinct-import     # Import instincts from others
+/learn status        # Show learned instincts with confidence scores
+/learn evolve        # Cluster related instincts into skills/commands
+/learn export        # Export instincts for sharing
+/learn import <file> # Import instincts from others
 ```
 
 ## Commands
 
+All instinct commands are consolidated under `/learn`:
+
 | Command | Description |
 |---------|-------------|
-| `/instinct-status` | Show all learned instincts with confidence |
-| `/evolve` | Cluster related instincts into skills/commands |
-| `/instinct-export` | Export instincts for sharing |
-| `/instinct-import <file>` | Import instincts from others |
+| `/learn` | Extract patterns from current session |
+| `/learn status` | Show all learned instincts with confidence |
+| `/learn evolve` | Cluster related instincts into skills/commands |
+| `/learn export` | Export instincts for sharing |
+| `/learn import <file>` | Import instincts from others |
 
 ## Configuration
 

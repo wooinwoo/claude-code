@@ -21,7 +21,7 @@ wiw_claude-code/
 │
 ├── base/                    ECC에서 동기화 (sync.ps1로 관리, 직접 수정 X)
 │   ├── agents/              ECC 에이전트 (10개: planner, architect, tdd-guide 등)
-│   ├── commands/            ECC 커맨드 (19개: build-fix, code-review, plan 등)
+│   ├── commands/            ECC 커맨드 (3개: orchestrate, verify, learn)
 │   ├── rules/               ECC 규칙
 │   │   ├── common/          공통 (git-workflow, security, testing 등)
 │   │   └── typescript/      TypeScript 전용 (patterns, coding-style 등)
@@ -41,8 +41,7 @@ wiw_claude-code/
 │   │   └── jira.md          Jira 이슈 생성 규칙 (Task/Bug/Story 템플릿, MCP 도구)
 │   ├── commands/
 │   │   ├── commit.md        /commit 커맨드
-│   │   ├── jira-bug.md      /jira-bug 커맨드
-│   │   └── jira-task.md     /jira-task 커맨드
+│   │   └── jira.md          /jira bug|task 통합 커맨드
 │   ├── scripts/             MCP 서버 래퍼 스크립트
 │   │   ├── run-github-mcp.cjs  GitHub MCP (.env에서 PAT 로드)
 │   │   └── run-jira-mcp.cjs    Jira MCP (.env에서 토큰 로드)
@@ -56,13 +55,7 @@ wiw_claude-code/
 │   │   ├── performance-reviewer.md 성능 전문가 에이전트 (Core Web Vitals, 번들, 렌더링)
 │   │   └── next-build-resolver.md  Next.js 빌드 에러 해결 에이전트
 │   ├── commands/
-│   │   ├── react-review.md         /react-review 커맨드
-│   │   ├── react-test.md           /react-test 커맨드
-│   │   ├── next-build.md           /next-build 커맨드
-│   │   ├── orchestrate-start.md    /orchestrate-start 워크플로우 시작
-│   │   ├── orchestrate-review.md   /orchestrate-review 4명 전문가 리뷰
-│   │   ├── orchestrate-impl.md     /orchestrate-impl 병렬 구현
-│   │   └── orchestrate-done.md     /orchestrate-done 검증+PR
+│   │   └── orchestrate.md          /orchestrate 4-Phase 파이프라인 (상태 추적)
 │   └── skills/
 │       ├── react-patterns/         React 컴포넌트 패턴
 │       ├── react-testing/          React 테스팅 가이드
@@ -75,16 +68,8 @@ wiw_claude-code/
 │   ├── agents/
 │   │   └── schema-designer.md       DB 스키마 설계 에이전트
 │   └── commands/
-│       ├── ci-heal.md               /ci-heal CI 오류 해결
-│       ├── docker-optimize.md       /docker-optimize 도커 최적화
-│       ├── orchestrate-start.md     /orchestrate-start 워크플로우 시작
-│       ├── orchestrate-review.md    /orchestrate-review 플랜 리뷰
-│       ├── orchestrate-impl.md      /orchestrate-impl 병렬 구현
-│       ├── orchestrate-done.md      /orchestrate-done PR 생성
-│       ├── wt-new.md                /wt-new worktree 생성
-│       ├── wt-list.md               /wt-list worktree 목록
-│       ├── wt-sync.md               /wt-sync .env 동기화
-│       └── wt-rm.md                 /wt-rm worktree 삭제
+│       ├── orchestrate.md           /orchestrate 4-Phase 파이프라인 (상태 추적)
+│       └── wt.md                    /wt new|list|sync|rm 통합 커맨드
 │
 ├── exclude.json             ECC에서 제외할 항목 매핑 (sync.ps1이 참조)
 ├── sync.ps1                 ECC → base/ 동기화 + exclude 처리

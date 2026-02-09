@@ -1,6 +1,7 @@
 {
-  "_description": "sync.ps1이 ECC에서 동기화 후 base/_excluded/로 이동할 항목. 우리 회사(React/Next.js + NestJS)에서 사용하지 않는 언어/프레임워크 관련 파일.",
+  "_description": "sync.ps1이 ECC에서 동기화 후 base/_excluded/로 이동할 항목.",
   "_usage": "제외 해제: 항목을 지우면 다음 sync 시 base/에 포함됨. 제외 추가: 항목을 추가하면 다음 sync 시 _excluded/로 이동.",
+  "_note": "에이전트가 자동 발동하므로 대부분의 커맨드는 불필요. common/에 통합 커맨드(learn, orchestrate, jira, commit)가 있음.",
 
   "rules": [
     "golang",
@@ -25,7 +26,24 @@
     "multi-workflow.md",
     "pm2.md",
     "sessions.md",
-    "checkpoint.md"
+    "checkpoint.md",
+    "build-fix.md",
+    "code-review.md",
+    "e2e.md",
+    "eval.md",
+    "evolve.md",
+    "instinct-export.md",
+    "instinct-import.md",
+    "instinct-status.md",
+    "learn.md",
+    "orchestrate.md",
+    "plan.md",
+    "refactor-clean.md",
+    "setup-pm.md",
+    "skill-create.md",
+    "tdd.md",
+    "test-coverage.md",
+    "update-docs.md"
   ],
 
   "skills": [
