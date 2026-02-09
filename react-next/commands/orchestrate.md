@@ -39,12 +39,23 @@ state 파일의 `phase` 값:
 
 ```
 Phase 1: Plan     → 사용자와 플랜 협업 → 승인
+                    ↓ 자동 연결 (승인 후 멈추지 않고 계속)
 Phase 2: Branch   → 워크트리 + 브랜치 생성
+                    ↓ 자동 연결
 Phase 3: Develop  → 워크트리에서 구현
-Phase 4: PR       → 검증 → 커밋 → PR 생성
-Phase 5: Feedback → PR 코멘트 반영 (반복)
+                    ↓ 자동 연결
+Phase 4: PR       → 검증 → 에이전트 리뷰 → 커밋 → PR 생성
+                    ■ 여기서 정지 (리뷰 대기)
+Phase 5: Feedback → PR 코멘트 반영 (반복)   ← /orchestrate 수동 호출
 Phase 6: Clean    → PR 병합 확인 → 워크트리/브랜치 삭제
 ```
+
+### 자동 연결 규칙
+
+Phase 1 승인 후 **Phase 2→3→4를 한 번에 실행**합니다. 중간에 멈추지 않습니다.
+사용자 입력이 필요한 시점은 **Phase 1 (플랜 승인)**과 **Phase 5 (리뷰 피드백)** 뿐입니다.
+
+state 파일의 phase 값은 **세션 복구용**입니다. 세션이 중간에 끊기면 `/orchestrate`로 해당 phase부터 이어갑니다.
 
 ---
 
@@ -111,12 +122,40 @@ AskUserQuestion으로 핵심을 명확히:
 5. 테스트
 ```
 
-### 1-5. 사용자 승인
+### 1-5. 플랜 검증 에이전트
 
-**플랜을 보여주고 반드시 승인을 받습니다.**
+플랜을 사용자에게 보여주기 전에, **2개의 Task tool을 병렬 호출**하여 플랜을 검증합니다:
+
+```
+Task A — Feasibility Review (subagent_type: general-purpose)
+prompt: "다음 구현 플랜을 검토해줘: {plan 내용}
+프로젝트 경로: {project_path}
+기존 코드베이스를 읽고, 이 플랜이 기술적으로 타당한지 점검해줘.
+체크 항목:
+- 기존 코드와 충돌하는 설계가 있는지
+- 누락된 의존성이나 선행 작업이 있는지
+- 기술적으로 불가능하거나 비효율적인 접근이 있는지
+- 더 나은 대안이 있는지
+리스크가 있으면 구체적으로 알려줘."
+
+Task B — Impact Analysis (subagent_type: general-purpose)
+prompt: "다음 구현 플랜이 기존 코드에 미치는 영향을 분석해줘: {plan 내용}
+프로젝트 경로: {project_path}
+체크 항목:
+- 변경이 필요한 기존 파일 목록과 신규 생성 파일
+- 영향받는 기존 페이지/컴포넌트/hooks
+- 사이드 이펙트 가능성 (기존 테스트, UI 동작, 공유 타입/유틸 파급)
+영향 범위를 구체적으로 알려줘."
+```
+
+검증 결과에 Critical 이슈가 있으면 플랜을 수정한 후 진행합니다.
+
+### 1-6. 사용자 승인
+
+**검증된 플랜을 보여주고 반드시 승인을 받습니다.** 에이전트 검증 결과도 함께 공유합니다.
 수정 요청 시 반영 후 재승인.
 
-### 1-6. 상태 저장
+### 1-6. 상태 저장 → Phase 2로 자동 연결
 
 `.orchestrate/{slug}.json`:
 
@@ -133,9 +172,10 @@ AskUserQuestion으로 핵심을 명확히:
 ```
 
 ```
-Phase 1 완료. 플랜이 승인되었습니다.
-→ /orchestrate 를 호출하면 Phase 2 (워크트리 생성)로 진행합니다.
+Phase 1 완료. 플랜이 승인되었습니다. Phase 2→3→4를 자동으로 진행합니다.
 ```
+
+**멈추지 않고 바로 Phase 2를 실행합니다.**
 
 ---
 
@@ -164,15 +204,11 @@ cd .worktrees/{slug} && pnpm install
 cp -r plans/ .worktrees/{slug}/plans/
 ```
 
-### 2-4. 상태 업데이트
+### 2-4. 상태 업데이트 → Phase 3로 자동 연결
 
 phase → `"develop"`
 
-```
-Phase 2 완료. 워크트리가 생성되었습니다.
-→ 작업 디렉토리: .worktrees/{slug}/
-→ /orchestrate 를 호출하면 Phase 3 (구현)으로 진행합니다.
-```
+**멈추지 않고 바로 Phase 3를 실행합니다.**
 
 ---
 
@@ -208,16 +244,11 @@ pnpm test
 
 실패 시 수정 후 재실행.
 
-### 3-4. 상태 업데이트
+### 3-4. 상태 업데이트 → Phase 4로 자동 연결
 
 phase → `"done"`
 
-```
-Phase 3 완료. 구현이 완료되었습니다.
-- Build: {pass/fail}
-- Test: {N/N pass}
-→ /orchestrate 를 호출하면 Phase 4 (검증 + PR)로 진행합니다.
-```
+**멈추지 않고 바로 Phase 4를 실행합니다.**
 
 ---
 
@@ -241,40 +272,135 @@ LOOP (max 3):
 
 3회 실패 시 사용자에게 보고 후 중단.
 
-### 4-2. 커밋
+### 4-2. 에이전트 선별 및 병렬 리뷰
+
+커밋 전 변경 파일을 분석하고, 해당되는 에이전트만 선별하여 병렬 실행합니다.
+
+**Step 1: 변경 파일 확인**
+
+```bash
+git diff --name-only HEAD
+```
+
+**Step 2: 에이전트 선별**
+
+변경된 파일 목록을 보고 아래 기준에 따라 투입할 에이전트를 결정합니다:
+
+| 에이전트 | 구분 | 투입 조건 | 전담 영역 (다른 에이전트와 겹치지 않음) |
+|---------|------|----------|--------------------------------------|
+| **Code Review** | 필수 | 항상 | 가독성, 중복 코드, 함수/파일 크기, 에러 처리 |
+| **Convention** | 필수 | 항상 | 네이밍, 파일/폴더 구조, import 패턴, 프로젝트 규칙 (CLAUDE.md + rules/) |
+| **Security** | 선택 | auth, api, middleware, 사용자 입력 처리 파일 변경 시 | XSS, 클라이언트 시크릿 노출, 인증/토큰 관리, 사용자 입력 검증, 의존성 취약점 |
+| **Performance** | 선택 | 컴포넌트, 데이터 처리, 상태 관리 파일 변경 시 | 번들 크기, 무거운 연산, 메모리 릭, Core Web Vitals (훅 최적화는 React Pattern 담당) |
+| **React Pattern** | 선택 | .tsx 컴포넌트, hooks, 상태 관리 파일 변경 시 | hooks 규칙, 리렌더 최적화, 컴포넌트 구조, 상태 패턴, a11y |
+
+**Step 3: 선별된 에이전트를 하나의 응답에서 병렬 호출**
+
+> **반드시 선별된 모든 Task를 한 번에 병렬 호출하세요. 순차 실행하지 마세요.**
+
+각 에이전트의 Task tool 호출 형식:
+
+```
+Code Review (subagent_type: general-purpose) — 필수
+prompt: "워크트리 {worktree_path}의 다음 변경 파일들을 리뷰해줘: {file_list}
+전담 영역: 가독성, 중복 코드, 함수/파일 크기, 에러 처리.
+제외 (다른 에이전트 담당): 네이밍 컨벤션, 보안, 성능 최적화, React 패턴.
+심각도(Critical/High/Medium/Low)와 파일:라인 위치를 포함해서 리포트해줘."
+
+Convention Review (subagent_type: general-purpose) — 필수
+prompt: "워크트리 {worktree_path}의 다음 변경 파일들을 프로젝트 컨벤션 점검해줘: {file_list}
+CLAUDE.md와 .claude/rules/ 에 정의된 프로젝트 규칙을 읽고 준수 여부를 확인해줘.
+전담 영역: 네이밍, 파일/폴더 구조, import 패턴, 프로젝트 특화 규칙.
+심각도(Critical/High/Medium/Low)와 파일:라인 위치를 포함해서 리포트해줘."
+
+Security Review (subagent_type: general-purpose) — 선택
+prompt: "워크트리 {worktree_path}의 다음 변경 파일들을 보안 점검해줘: {file_list}
+전담 영역: XSS, 클라이언트 시크릿 노출, 인증/토큰 관리, 사용자 입력 검증, 의존성 취약점.
+심각도(Critical/High/Medium/Low)와 파일:라인 위치를 포함해서 리포트해줘."
+
+Performance Review (subagent_type: general-purpose) — 선택
+prompt: "워크트리 {worktree_path}의 다음 변경 파일들을 성능 점검해줘: {file_list}
+전담 영역: 번들 크기, 무거운 연산, 메모리 릭, Core Web Vitals.
+제외 (React Pattern 담당): 리렌더 최적화, memo/useMemo/useCallback.
+심각도(Critical/High/Medium/Low)와 파일:라인 위치를 포함해서 리포트해줘."
+
+React Pattern Review (subagent_type: general-purpose) — 선택
+prompt: "워크트리 {worktree_path}의 다음 변경 파일들을 React 패턴 점검해줘: {file_list}
+전담 영역: hooks 규칙, 리렌더 최적화(memo/useMemo/useCallback), 컴포넌트 구조, 상태 관리 패턴, a11y.
+심각도(Critical/High/Medium/Low)와 파일:라인 위치를 포함해서 리포트해줘."
+```
+
+**결과 처리:**
+- **Critical/High** → 즉시 수정 후 4-1 재실행
+- **Medium** → 수정 후 진행
+- **Low/Info** → PR description의 "에이전트 리뷰 결과" 섹션에 기록, 진행
+
+### 4-3. 커밋
 
 ```bash
 git add {specific files}
 git commit -m "{type}({scope}): {description}"
 ```
 
-### 4-3. PR 생성
+### 4-4. PR 생성
 
 ```bash
 git push -u origin {branch}
 
 gh pr create --title "{type}({scope}): {description}" --body "$(cat <<'EOF'
-## Summary
-{what and why}
+## 개요
+{이 PR이 왜 필요한지 1-2문장}
 
-## Changes
-- {change 1}
-- {change 2}
+## 주요 변경사항
 
-## Test
-- [x] Build passes
-- [x] Tests pass
+### 신규 파일
+| 파일 | 역할 |
+|------|------|
+| `src/path/to/Component.tsx` | {역할 설명} |
+
+### 수정 파일
+| 파일 | 변경 내용 |
+|------|----------|
+| `src/path/to/existing.tsx` | {무엇을 왜 변경했는지} |
+
+## 구현 상세
+
+### {기능/컴포넌트 1}
+- {구현 방식과 이유}
+- {주요 로직 설명}
+
+### {기능/컴포넌트 2}
+- {구현 방식과 이유}
+
+## 에이전트 리뷰 결과
+- Code Review: {요약}
+- Security: {요약}
+- Performance: {요약}
+- React Pattern: {요약}
+- Convention: {요약}
+
+## 스크린샷 / 동작
+{해당 시 스크린샷 또는 동작 설명}
+
+## 테스트
+- [x] `pnpm lint` 통과
+- [x] `pnpm build` 통과
+- [x] `pnpm test` 통과
+- [ ] {수동 확인 필요 항목}
+
+## 참고사항
+- {리뷰어가 알아야 할 컨텍스트, 트레이드오프, 후속 작업 등}
 EOF
 )"
 ```
 
-### 4-4. Jira 상태 변경 (Jira 모드)
+### 4-5. Jira 상태 변경 (Jira 모드)
 
 ```typescript
 mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "In Review" })
 ```
 
-### 4-5. 상태 업데이트
+### 4-6. 상태 업데이트
 
 phase → `"pr"`, state에 `"pr_url"` 추가.
 
@@ -354,43 +480,30 @@ PR 병합 확인 후 워크트리와 브랜치를 정리합니다.
 
 > Phase 5에서 PR이 MERGED로 감지되면 자동으로 이 phase를 실행합니다.
 
-### 6-1. main 브랜치 업데이트
+### 6-1. 정리 스크립트 실행
+
+**Bash 한 번으로 전부 처리합니다:**
 
 ```bash
-cd {project-root}
-git checkout main
-git pull origin main
+bash {CLAUDE_PLUGIN_ROOT}/scripts/orchestrate-clean.sh {project-root} {slug} {branch}
 ```
 
-### 6-2. 워크트리 삭제
+이 스크립트가 자동으로:
+1. main checkout + pull
+2. 워크트리 제거 (force + 디렉토리 정리)
+3. 로컬 브랜치 삭제
+4. 리모트 브랜치 삭제
+5. `.orchestrate/{slug}.json` 삭제
 
-```bash
-git worktree remove .worktrees/{slug}
-```
+### 6-2. Jira 상태 변경 (Jira 모드)
 
-### 6-3. 브랜치 삭제
-
-```bash
-# 로컬
-git branch -d {branch}
-
-# 리모트 (이미 삭제됐으면 스킵)
-git push origin --delete {branch} 2>/dev/null || true
-```
-
-### 6-4. state 파일 정리
-
-```bash
-rm .orchestrate/{slug}.json
-```
-
-### 6-5. Jira 상태 변경 (Jira 모드)
+> standalone이면 스킵
 
 ```typescript
 mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "Done" })
 ```
 
-### 6-6. 완료
+### 6-3. 완료
 
 ```
 정리 완료.
@@ -407,12 +520,12 @@ mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "Done" }
 ```
 /orchestrate 상품 검색 페이지. 필터링, 정렬, 무한스크롤.
 ```
-→ Phase 1: 사용자와 플랜 협업
+→ Phase 1 (플랜) → 승인 후 Phase 2→3→4 자동 실행 → PR 생성 후 정지
 
 ```
 /orchestrate
 ```
-→ 현재 phase 감지하여 자동 진행
+→ 세션 복구: 중단된 phase부터 이어서 자동 진행
 
 ```
 /orchestrate PROJ-123
