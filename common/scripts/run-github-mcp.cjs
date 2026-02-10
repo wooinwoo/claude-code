@@ -21,8 +21,11 @@ if (fs.existsSync(envPath)) {
 }
 
 const token = process.env.GITHUB_PAT;
-if (!token) {
-  console.error("GITHUB_PAT not found in .claude/.env");
+if (!token || token.includes("ghp_xxxx") || token.length < 40) {
+  console.error("ERROR: GITHUB_PAT not configured in .claude/.env");
+  console.error("발급: https://github.com/settings/tokens/new");
+  console.error("권한: repo (전체), read:org");
+  console.error("형식: ghp_로 시작하는 40자 문자열");
   process.exit(1);
 }
 

@@ -1,1 +1,23 @@
+# Test projects
 test-project/
+
+# Claude Code - Orchestrate
+.orchestrate/
+worktrees/
+plans/
+
+# Claude Code - Learning system
+homunculus/
+.claude/homunculus/
+
+# MCP Configuration (may contain tokens)
+.mcp.json
+
+# Claude local settings
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/.wiw-stack
+
+# Environment files
+.env
+.env.local

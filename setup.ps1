@@ -246,6 +246,21 @@ if (-not (Test-Path $envFile) -and (Test-Path $envExample)) {
 }
 
 # ============================================================
+# homunculus 디렉토리 초기화 (continuous-learning-v2)
+# ============================================================
+$homunculusDir = Join-Path $claudeDir "homunculus"
+if (-not (Test-Path $homunculusDir)) {
+    New-Item -ItemType Directory -Path "$homunculusDir\instincts\personal" -Force | Out-Null
+    New-Item -ItemType Directory -Path "$homunculusDir\instincts\inherited" -Force | Out-Null
+    New-Item -ItemType Directory -Path "$homunculusDir\evolved\agents" -Force | Out-Null
+    New-Item -ItemType Directory -Path "$homunculusDir\evolved\skills" -Force | Out-Null
+    New-Item -ItemType Directory -Path "$homunculusDir\evolved\commands" -Force | Out-Null
+    New-Item -ItemType File -Path "$homunculusDir\observations.jsonl" -Force | Out-Null
+    Write-Host ""
+    Write-Host "  [NEW] homunculus/ 디렉토리 생성 (학습 시스템)" -ForegroundColor Green
+}
+
+# ============================================================
 # CLAUDE.md 생성 (없을 때만)
 # ============================================================
 $claudeMd = Join-Path $ProjectPath "CLAUDE.md"
@@ -280,6 +295,12 @@ $ignoreEntries = @(
     "# wiw_claude-code (setup.ps1로 관리)"
     ".claude/.env"
     ".claude/.wiw-stack"
+    ".claude/settings.local.json"
+    ".claude/homunculus/"
+    "CLAUDE.local.md"
+    ".orchestrate/"
+    "worktrees/"
+    "plans/"
 )
 
 if (Test-Path $gitignore) {

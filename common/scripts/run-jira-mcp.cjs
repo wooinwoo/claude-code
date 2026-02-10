@@ -21,16 +21,25 @@ if (fs.existsSync(envPath)) {
 }
 
 const token = process.env.JIRA_TOKEN;
-const jiraUrl = process.env.JIRA_URL || "https://rstful.atlassian.net";
+const jiraUrl = process.env.JIRA_URL || "https://your-company.atlassian.net";
 const jiraUsername = process.env.JIRA_USERNAME || "";
 
-if (!token) {
-  console.error("JIRA_TOKEN not found in .claude/.env");
+// Token validation
+if (!token || token.includes("your-jira-api-token") || token.includes("xxxxxxxx")) {
+  console.error("ERROR: JIRA_TOKEN not configured in .claude/.env");
+  console.error("발급: https://id.atlassian.com/manage-profile/security/api-tokens");
   process.exit(1);
 }
 
-if (!jiraUsername) {
-  console.error("JIRA_USERNAME not found in .claude/.env");
+if (!jiraUsername || jiraUsername.includes("your-email") || jiraUsername.includes("@company.com")) {
+  console.error("ERROR: JIRA_USERNAME not configured in .claude/.env");
+  console.error("형식: your-email@company.com (Atlassian 계정 이메일)");
+  process.exit(1);
+}
+
+if (!jiraUrl || jiraUrl.includes("your-company")) {
+  console.error("ERROR: JIRA_URL not configured in .claude/.env");
+  console.error("형식: https://your-company.atlassian.net");
   process.exit(1);
 }
 
