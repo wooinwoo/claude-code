@@ -3,7 +3,7 @@ test-project/
 
 # Claude Code - Orchestrate
 .orchestrate/
-worktrees/
+.worktrees/
 plans/
 
 # Claude Code - Learning system
