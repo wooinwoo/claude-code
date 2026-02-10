@@ -738,11 +738,18 @@ bash .claude/scripts/orchestrate-clean.sh $(pwd) {slug} {branch}
 ```
 
 이 스크립트가 자동으로:
+0. **PR merge 확인** (안전 장치)
+   - PR이 merge 안 됐으면 종료 (작업 내용 보호)
+   - merge 됐으면 안전하게 정리 진행
 1. main checkout + pull
 2. 워크트리 제거 (force + 디렉토리 정리)
 3. 로컬 브랜치 삭제
 4. 리모트 브랜치 삭제
 5. `.orchestrate/{slug}.json` 삭제
+
+**PR이 merge 안 됐을 때:**
+- 스크립트가 종료되고 안내 메시지 출력
+- PR을 merge하거나, 강제 삭제 명령어 사용
 
 ### 6-2. Jira 상태 변경 (Jira 모드)
 
