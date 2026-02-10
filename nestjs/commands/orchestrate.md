@@ -63,6 +63,21 @@ state 파일의 phase 값은 **세션 복구용**입니다. 세션이 중간에 
 
 사용자와 함께 기능 플랜을 작성합니다.
 
+### 1-0. 권한 사전 요청
+
+**파이프라인 시작 시 필요한 모든 권한을 한 번에 요청합니다:**
+
+```typescript
+// Phase 2-6에서 사용할 모든 git/bash 명령어 권한 사전 요청
+// 사용자가 한 번만 승인하면 이후 자동 진행
+allowedPrompts: [
+  { tool: "Bash", prompt: "git operations (add, commit, push, checkout, branch, worktree)" },
+  { tool: "Bash", prompt: "build and validation (pnpm install, biome check, build, test)" },
+  { tool: "Bash", prompt: "GitHub CLI operations (gh pr create, view)" },
+  { tool: "Bash", prompt: "file operations (cp, mv, rm, mkdir)" }
+]
+```
+
 ### 1-1. Jira 확인
 
 ```
@@ -787,3 +802,89 @@ mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "Done" }
 /orchestrate GIFCA-123
 ```
 → Jira 이슈 기반으로 Phase 1 시작
+
+---
+
+## Troubleshooting
+
+### Phase 3: 빌드 실패
+
+**증상**: `pnpm build` 실패, worktree에 갇힘
+
+**복구**:
+```bash
+# 1. worktree로 이동
+cd .worktrees/{slug}
+
+# 2. 에러 수정 후 다시 빌드
+pnpm biome check --write .
+pnpm build
+
+# 3. 성공하면 /orchestrate 재실행
+```
+
+### Phase 4: PR 생성 실패
+
+**증상**: `gh pr create` 실패 (네트워크, 권한 등)
+
+**복구**:
+```bash
+# 1. 수동으로 PR 생성 가능한지 확인
+cd .worktrees/{slug}
+gh pr create --title "..." --body "..."
+
+# 2. 또는 /orchestrate 재실행 (자동 재시도)
+```
+
+### Worktree 충돌
+
+**증상**: "worktree already exists" 에러
+
+**복구**:
+```bash
+# 1. worktree 목록 확인
+git worktree list
+
+# 2. 문제 worktree 제거
+git worktree remove .worktrees/{slug} --force
+rm -rf .worktrees/{slug}
+
+# 3. state 파일 삭제
+rm .orchestrate/{slug}.json
+
+# 4. 처음부터 다시 시작
+/orchestrate {description}
+```
+
+### MCP 연결 실패
+
+**증상**: Jira/GitHub MCP 오류
+
+**복구**:
+```bash
+# 1. .env 토큰 확인
+cat .claude/.env
+
+# 2. 토큰 재발급 및 입력
+# - GITHUB_PAT: https://github.com/settings/tokens/new
+# - JIRA_TOKEN: https://id.atlassian.com/manage-profile/security/api-tokens
+
+# 3. /orchestrate 재실행 (MCP 재연결)
+```
+
+### State 파일 손상
+
+**증상**: JSON parse 에러, state 불일치
+
+**복구**:
+```bash
+# 1. state 파일 확인
+cat .orchestrate/{slug}.json
+
+# 2. 수동 수정 또는 삭제
+rm .orchestrate/{slug}.json
+
+# 3. 워크트리 수동 정리 후 재시작
+git worktree remove .worktrees/{slug}
+/orchestrate {description}
+```

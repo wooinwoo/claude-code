@@ -27,6 +27,18 @@ description: 간단한 수정을 체계적으로 진행. Jira 연동, 자동 커
 
 ## Phase 1: 준비
 
+### 1-0. 권한 사전 요청
+
+**워크플로 시작 시 필요한 모든 권한을 한 번에 요청합니다:**
+
+```typescript
+// Phase 2-5에서 사용할 모든 명령어 권한 사전 요청
+allowedPrompts: [
+  { tool: "Bash", prompt: "git operations (add, commit, push, stash)" },
+  { tool: "Bash", prompt: "validation (biome/lint check, build)" }
+]
+```
+
 ### 1-1. Jira 확인 (선택)
 
 ```typescript
@@ -248,10 +260,21 @@ Jira: PROJ-123 → Done
 
 ## Phase 6: 취소 (cancel)
 
-### 6-1. 변경사항 되돌리기
+### 6-1. 변경사항 되돌리기 (복구 가능)
 
 ```bash
-git restore .
+# Stash에 저장 (복구 가능)
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+git stash push -m "fix cancelled: $TIMESTAMP"
+
+echo ""
+echo "✅ 변경사항을 stash에 저장했습니다."
+echo ""
+echo "복구하려면:"
+echo "  git stash list              # stash 목록 확인"
+echo "  git stash apply stash@{0}   # 가장 최근 stash 복구"
+echo "  git stash pop stash@{0}     # 복구 후 stash 삭제"
+echo ""
 ```
 
 ### 6-2. Jira 상태 복원 (선택)
