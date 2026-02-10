@@ -127,7 +127,7 @@ AskUserQuestion으로 핵심을 명확히:
 플랜을 사용자에게 보여주기 전에, **2개의 Task tool을 병렬 호출**하여 플랜을 검증합니다:
 
 ```
-Task A — Feasibility Review (subagent_type: general-purpose)
+Task A — Feasibility Review (subagent_type: general-purpose) — 필수
 prompt: "다음 구현 플랜을 검토해줘: {plan 내용}
 프로젝트 경로: {project_path}
 기존 코드베이스를 읽고, 이 플랜이 기술적으로 타당한지 점검해줘.
@@ -138,7 +138,7 @@ prompt: "다음 구현 플랜을 검토해줘: {plan 내용}
 - 더 나은 대안이 있는지
 리스크가 있으면 구체적으로 알려줘."
 
-Task B — Impact Analysis (subagent_type: general-purpose)
+Task B — Impact Analysis (subagent_type: general-purpose) — 필수
 prompt: "다음 구현 플랜이 기존 코드에 미치는 영향을 분석해줘: {plan 내용}
 프로젝트 경로: {project_path}
 체크 항목:
@@ -155,20 +155,29 @@ prompt: "다음 구현 플랜이 기존 코드에 미치는 영향을 분석해�
 **검증된 플랜을 보여주고 반드시 승인을 받습니다.** 에이전트 검증 결과도 함께 공유합니다.
 수정 요청 시 반영 후 재승인.
 
-### 1-6. 상태 저장 → Phase 2로 자동 연결
+### 1-7. 상태 저장 → Phase 2로 자동 연결
 
-`.orchestrate/{slug}.json`:
+`.orchestrate/{slug}.json` 생성:
 
-```json
+```bash
+# 변수 설정 (placeholder를 실제 값으로 치환)
+feature_name="상품 검색 페이지"
+slug="product-search"  # feature_name의 kebab-case 버전
+jira_key="PROJ-123"  # 또는 standalone이면 "null"
+identifier="${jira_key}-${slug}"  # 또는 standalone이면 "${slug}"
+
+mkdir -p .orchestrate
+cat > ".orchestrate/${slug}.json" <<EOF
 {
-  "feature": "{name}",
-  "jira_key": "{KEY or null}",
-  "branch": "{JIRA-KEY}-{slug} or feature/{slug}",
-  "plan_file": "plans/{identifier}.md",
-  "worktree": ".worktrees/{slug}",
+  "feature": "${feature_name}",
+  "jira_key": ${jira_key:+\"$jira_key\"}${jira_key:-null},
+  "branch": "${identifier}",
+  "plan_file": "plans/${identifier}.md",
+  "worktree": ".worktrees/${slug}",
   "phase": "branch",
-  "started_at": "{ISO}"
+  "started_at": "$(date -Iseconds)"
 }
+EOF
 ```
 
 ```
@@ -193,7 +202,14 @@ git worktree add .worktrees/{slug} -b {branch-name}
 ### 2-2. 의존성 설치
 
 ```bash
-cd .worktrees/{slug} && pnpm install
+cd .worktrees/{slug}
+
+# .env 파일 복사 (있는 경우만)
+if [ -f ../.env ]; then
+  cp ../.env .env
+fi
+
+pnpm install
 ```
 
 ### 2-3. 플랜 파일 복사
@@ -206,7 +222,10 @@ cp -r plans/ .worktrees/{slug}/plans/
 
 ### 2-4. 상태 업데이트 → Phase 3로 자동 연결
 
-phase → `"develop"`
+```bash
+# state 파일의 phase 값을 "develop"으로 업데이트
+jq '.phase = "develop"' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
+```
 
 **멈추지 않고 바로 Phase 3를 실행합니다.**
 
@@ -237,16 +256,40 @@ state 파일에서 `worktree` 경로를 읽어 해당 디렉토리에서 작업�
 
 ```bash
 cd .worktrees/{slug}
-pnpm lint
-pnpm build
-pnpm test
 ```
 
-실패 시 수정 후 재실행.
+**검증 루프 실행 (최대 3회 시도):**
+
+```
+attempt = 0
+
+while attempt < 3:
+  attempt++
+
+  1. pnpm lint --fix
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  2. pnpm build
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  3. pnpm test
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  4. 모두 성공 → 루프 종료 (break)
+
+if attempt == 3:
+  에러 로그 출력
+  "검증 3회 실패. 다음 에러를 확인하세요: [마지막 에러]"
+  Phase 중단 (다음 Phase로 넘어가지 않음)
+```
 
 ### 3-4. 상태 업데이트 → Phase 4로 자동 연결
 
-phase → `"done"`
+```bash
+# 메인 프로젝트 루트로 이동 후 state 파일 업데이트
+cd ../..
+jq '.phase = "done"' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
+```
 
 **멈추지 않고 바로 Phase 4를 실행합니다.**
 
@@ -262,15 +305,30 @@ phase → `"done"`
 cd .worktrees/{slug}
 ```
 
-```
-LOOP (max 3):
-  1. pnpm lint --fix
-  2. pnpm build       → 실패 시 수정, 재시작
-  3. pnpm test        → 실패 시 수정, 재시작
-  4. All green → EXIT
-```
+**검증 루프 실행 (최대 3회 시도):**
 
-3회 실패 시 사용자에게 보고 후 중단.
+```
+attempt = 0
+
+while attempt < 3:
+  attempt++
+
+  1. pnpm lint --fix
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  2. pnpm build
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  3. pnpm test
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  4. 모두 성공 → 루프 종료 (break)
+
+if attempt == 3:
+  에러 로그 출력
+  "검증 3회 실패. 다음 에러를 확인하세요: [마지막 에러]"
+  Phase 중단 (다음 Phase로 넘어가지 않음)
+```
 
 ### 4-2. 에이전트 선별 및 병렬 리뷰
 
@@ -296,7 +354,24 @@ git diff --name-only HEAD
 
 **Step 3: 선별된 에이전트를 하나의 응답에서 병렬 호출**
 
-> **반드시 선별된 모든 Task를 한 번에 병렬 호출하세요. 순차 실행하지 마세요.**
+> **중요: 선별된 모든 Task를 한 번의 응답에 모두 포함해서 병렬 실행하세요.**
+
+**❌ 잘못된 예시 (순차 실행):**
+```
+1. Code Review Task 호출 → 결과 대기
+2. 결과 확인 후 Convention Task 호출 → 결과 대기
+3. 결과 확인 후 Security Task 호출
+```
+
+**✅ 올바른 예시 (병렬 실행):**
+```
+한 번의 응답에 3개 Task tool을 모두 포함:
+- Task: Code Review
+- Task: Convention Review
+- Task: Security Review
+
+(3개가 동시에 실행되고, 모든 결과를 한 번에 수집)
+```
 
 각 에이전트의 Task tool 호출 형식:
 
@@ -348,6 +423,16 @@ git commit -m "{type}({scope}): {description}"
 git push -u origin {branch}
 
 gh pr create --title "{type}({scope}): {description}" --body "$(cat <<'EOF'
+<!-- PR 작성 가이드:
+- 모든 {placeholder}를 실제 값으로 치환하세요
+- 필수 섹션: 개요, 주요 변경사항, 핵심 구현, UI 흐름, API 연동, 테스트
+- 선택 섹션 (해당 시만 포함):
+  * 상태 관리 전략 (전역 상태 사용 시)
+  * 성능 최적화 (메모이제이션, 코드 스플리팅 적용 시)
+  * 변경 전/후 비교 (리팩토링 시)
+- 해당 없는 섹션은 제거하고, "해당 없음"으로 남기지 마세요
+-->
+
 ## 개요
 {이 PR이 왜 필요한지 1-2문장}
 
@@ -357,39 +442,213 @@ gh pr create --title "{type}({scope}): {description}" --body "$(cat <<'EOF'
 | 파일 | 역할 |
 |------|------|
 | `src/path/to/Component.tsx` | {역할 설명} |
+| `src/hooks/use{Name}.ts` | {커스텀 훅 역할} |
 
 ### 수정 파일
 | 파일 | 변경 내용 |
 |------|----------|
 | `src/path/to/existing.tsx` | {무엇을 왜 변경했는지} |
 
-## 구현 상세
+## 핵심 구현
 
-### {기능/컴포넌트 1}
-- {구현 방식과 이유}
-- {주요 로직 설명}
+### 컴포넌트 구조
+\`\`\`tsx
+// src/components/{Name}/{Name}.tsx (핵심 로직만)
+export function {ComponentName}({ prop }: {Name}Props) {
+  // 1. 상태 관리 (useState, useReducer)
+  const [state, setState] = useState<State>(initialState);
 
-### {기능/컴포넌트 2}
-- {구현 방식과 이유}
+  // 2. 데이터 페칭 (useSWR, useQuery)
+  const { data, error } = useSWR('/api/endpoint', fetcher);
+
+  // 3. 이벤트 핸들러
+  const handleAction = useCallback(() => {
+    // 비즈니스 로직
+  }, [deps]);
+
+  // 4. 조건부 렌더링 (로딩/에러/빈 상태)
+  if (error) return <ErrorState />;
+  if (!data) return <Loading />;
+
+  return (
+    <div>
+      {/* UI 구조 */}
+    </div>
+  );
+}
+\`\`\`
+
+### 커스텀 훅 (있다면)
+\`\`\`typescript
+// src/hooks/use{Name}.ts
+export function use{Name}(params: Params) {
+  // 상태 로직 캡슐화
+  // API 호출 로직
+  // 비즈니스 로직
+
+  return {
+    data,
+    isLoading,
+    error,
+    actions: { update, delete }
+  };
+}
+\`\`\`
+
+## UI 흐름
+
+\`\`\`
+[페이지 로드]
+   ↓
+[데이터 페칭] → 로딩 표시
+   ↓ 실패 시: 에러 화면
+   ↓ 성공 시
+[데이터 렌더링]
+   ↓
+[사용자 인터랙션] → [상태 업데이트] → [리렌더링]
+   ↓
+[API 호출 (mutation)] → Optimistic Update
+   ↓ 실패 시: 롤백 + 에러 토스트
+   ↓ 성공 시
+[데이터 재검증] → [UI 업데이트]
+\`\`\`
+
+## API 연동
+
+### 요청 예시
+\`\`\`typescript
+// src/lib/api/{resource}.ts
+export async function {actionName}(params: Params): Promise<Response> {
+  const res = await fetch('/api/v1/{resource}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!res.ok) throw new ApiError(res);
+  return res.json();
+}
+\`\`\`
+
+### 응답 타입
+\`\`\`typescript
+// src/types/{resource}.ts
+export interface {Resource} {
+  id: string;
+  field: string;
+  createdAt: string;
+}
+
+export interface {Action}Response {
+  data: {Resource};
+  message?: string;
+}
+\`\`\`
+
+## 상태 관리 전략
+
+### 로컬 상태 (useState)
+- {어떤 상태를 왜 로컬로 관리하는지}
+
+### 서버 상태 (SWR/TanStack Query)
+- {캐싱 전략, revalidation 조건}
+- \`staleTime\`, \`cacheTime\` 설정 이유
+
+### 전역 상태 (Context/Zustand 등)
+- {어떤 상태를 왜 전역으로 관리하는지}
+
+## 성능 최적화
+
+### 리렌더링 최적화
+\`\`\`typescript
+// Before (문제점)
+function Component() {
+  const handleClick = () => { ... }; // 매 렌더마다 새 함수 생성
+  const filtered = data.filter(...); // 매 렌더마다 필터링
+}
+
+// After (개선)
+function Component() {
+  const handleClick = useCallback(() => { ... }, [deps]); // 메모이제이션
+  const filtered = useMemo(() => data.filter(...), [data]); // 캐싱
+}
+\`\`\`
+
+### 번들 최적화
+- {코드 스플리팅, Dynamic Import 사용 여부}
+- {이미지 최적화, next/image 사용}
+
+### Core Web Vitals 영향
+- **LCP**: {최대 콘텐츠풀 페인트 개선 사항}
+- **FID**: {최초 입력 지연 개선 사항}
+- **CLS**: {누적 레이아웃 시프트 개선 사항}
+
+## 접근성 (a11y)
+
+- **키보드 네비게이션**: {Tab, Enter, Esc 지원 여부}
+- **스크린 리더**: {aria-label, role 속성 사용}
+- **포커스 관리**: {모달, 드롭다운 포커스 트랩}
+- **색상 대비**: {WCAG AA/AAA 준수 여부}
+
+## 변경 전/후 비교 (리팩토링 시)
+
+### Before (문제점)
+\`\`\`tsx
+// {문제 설명 — prop drilling, 중복 로직, 복잡도 등}
+{기존 코드 핵심 부분}
+\`\`\`
+
+### After (개선)
+\`\`\`tsx
+// {개선 내용 — Context 사용, 커스텀 훅 추출, 단순화 등}
+{새 코드 핵심 부분}
+\`\`\`
+
+### 개선 효과
+- {번들 크기, 렌더링 횟수, 코드 라인 수 등}
 
 ## 에이전트 리뷰 결과
-- Code Review: {요약}
-- Security: {요약}
-- Performance: {요약}
-- React Pattern: {요약}
-- Convention: {요약}
+- **Code Review**: {요약}
+- **Security**: {요약}
+- **Performance**: {요약}
+- **React Pattern**: {요약}
+- **Convention**: {요약}
 
 ## 스크린샷 / 동작
-{해당 시 스크린샷 또는 동작 설명}
+
+### Desktop
+![Desktop View]({screenshot_url})
+
+### Mobile
+![Mobile View]({screenshot_url})
+
+### 주요 인터랙션
+1. {액션 1} → {결과 설명}
+2. {액션 2} → {결과 설명}
 
 ## 테스트
+
+### 자동 테스트
 - [x] `pnpm lint` 통과
 - [x] `pnpm build` 통과
 - [x] `pnpm test` 통과
-- [ ] {수동 확인 필요 항목}
+- [x] RTL 컴포넌트 테스트 추가 ({N}개)
+  - [x] 렌더링 테스트
+  - [x] 인터랙션 테스트
+  - [x] 에러 케이스 테스트
+
+### 수동 테스트 체크리스트
+- [ ] ✅ 데스크톱 (Chrome, Safari, Firefox)
+- [ ] ✅ 모바일 (iOS Safari, Android Chrome)
+- [ ] ✅ 반응형 (768px, 1024px, 1440px)
+- [ ] ✅ 다크모드 (해당 시)
+- [ ] ✅ 키보드 네비게이션
+- [ ] ✅ 스크린 리더 (NVDA/VoiceOver)
 
 ## 참고사항
 - {리뷰어가 알아야 할 컨텍스트, 트레이드오프, 후속 작업 등}
+- {Breaking Change 여부, 마이그레이션 가이드}
+- {기존 페이지/컴포넌트에 미치는 영향}
 EOF
 )"
 ```
@@ -402,7 +661,14 @@ mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "In Revi
 
 ### 4-6. 상태 업데이트
 
-phase → `"pr"`, state에 `"pr_url"` 추가.
+```bash
+# 프로젝트 루트로 이동
+cd ../..
+
+# PR URL 추출 후 state 파일 업데이트
+PR_URL=$(gh pr view {branch} --json url -q .url)
+jq --arg url "$PR_URL" '.phase = "pr" | .pr_url = $url' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
+```
 
 ```
 Phase 4 완료. PR이 생성되었습니다.
@@ -485,7 +751,8 @@ PR 병합 확인 후 워크트리와 브랜치를 정리합니다.
 **Bash 한 번으로 전부 처리합니다:**
 
 ```bash
-bash {CLAUDE_PLUGIN_ROOT}/scripts/orchestrate-clean.sh {project-root} {slug} {branch}
+# .claude 디렉토리에서 정리 스크립트 실행
+bash .claude/scripts/orchestrate-clean.sh $(pwd) {slug} {branch}
 ```
 
 이 스크립트가 자동으로:

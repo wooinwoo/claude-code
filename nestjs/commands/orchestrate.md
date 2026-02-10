@@ -130,7 +130,7 @@ AskUserQuestion으로 핵심을 명확히:
 플랜을 사용자에게 보여주기 전에, **2개의 Task tool을 병렬 호출**하여 플랜을 검증합니다:
 
 ```
-Task A — Feasibility Review (subagent_type: general-purpose)
+Task A — Feasibility Review (subagent_type: general-purpose) — 필수
 prompt: "다음 구현 플랜을 검토해줘: {plan 내용}
 프로젝트 경로: {project_path}
 기존 코드베이스를 읽고, 이 플랜이 기술적으로 타당한지 점검해줘.
@@ -142,7 +142,7 @@ prompt: "다음 구현 플랜을 검토해줘: {plan 내용}
 - 더 나은 대안이 있는지
 리스크가 있으면 구체적으로 알려줘."
 
-Task B — Impact Analysis (subagent_type: general-purpose)
+Task B — Impact Analysis (subagent_type: general-purpose) — 필수
 prompt: "다음 구현 플랜이 기존 코드에 미치는 영향을 분석해줘: {plan 내용}
 프로젝트 경로: {project_path}
 체크 항목:
@@ -154,6 +154,26 @@ prompt: "다음 구현 플랜이 기존 코드에 미치는 영향을 분석해�
 영향 범위를 구체적으로 알려줘."
 ```
 
+**Feasibility 결과에서 다음 중 하나라도 언급되면, Schema Design 에이전트 추가 호출:**
+- "DB 마이그레이션 필요", "테이블 추가/변경", "컬럼 추가/수정/삭제"
+- "스키마 변경", "인덱스 추가/변경", "외래키 변경", "제약조건 변경"
+- 또는 응답에 "database", "schema", "migration", "table", "column" 키워드 포함
+
+```
+Task C — Schema Design Review (subagent_type: general-purpose) — 선택적
+prompt: "다음 구현 플랜의 DB 스키마 설계를 검토해줘: {plan 내용}
+프로젝트 경로: {project_path}
+기존 스키마 파일을 읽고, 다음을 검토해줘:
+체크 항목:
+- 데이터 모델링: 엔티티 구조, 관계 설정 (1:1, 1:N, N:M)
+- 정규화: 중복 제거, 적절한 정규화 수준
+- 타입 선택: 컬럼 타입, nullable, default 값
+- 제약조건: PK, FK, unique, check 제약
+- 인덱스 계획: 쿼리 패턴에 맞는 인덱스
+- 네이밍 컨벤션: 테이블/컬럼명 일관성
+문제가 있으면 구체적으로 알려줘."
+```
+
 검증 결과에 Critical 이슈가 있으면 플랜을 수정한 후 진행합니다.
 
 ### 1-6. 사용자 승인
@@ -161,20 +181,29 @@ prompt: "다음 구현 플랜이 기존 코드에 미치는 영향을 분석해�
 **검증된 플랜을 보여주고 반드시 승인을 받습니다.** 에이전트 검증 결과도 함께 공유합니다.
 수정 요청 시 반영 후 재승인.
 
-### 1-6. 상태 저장 → Phase 2로 자동 연결
+### 1-7. 상태 저장 → Phase 2로 자동 연결
 
-`.orchestrate/{slug}.json`:
+`.orchestrate/{slug}.json` 생성:
 
-```json
+```bash
+# 변수 설정 (placeholder를 실제 값으로 치환)
+feature_name="1:1 문의 기능"
+slug="inquiry"  # feature_name의 kebab-case 버전
+jira_key="GIFCA-123"  # 또는 standalone이면 "null"
+identifier="${jira_key}-${slug}"  # 또는 standalone이면 "${slug}"
+
+mkdir -p .orchestrate
+cat > ".orchestrate/${slug}.json" <<EOF
 {
-  "feature": "{name}",
-  "jira_key": "{KEY or null}",
-  "branch": "{JIRA-KEY}-{slug}",
-  "plan_file": "plans/{identifier}.md",
-  "worktree": ".worktrees/{slug}",
+  "feature": "${feature_name}",
+  "jira_key": ${jira_key:+\"$jira_key\"}${jira_key:-null},
+  "branch": "${identifier}",
+  "plan_file": "plans/${identifier}.md",
+  "worktree": ".worktrees/${slug}",
   "phase": "branch",
-  "started_at": "{ISO}"
+  "started_at": "$(date -Iseconds)"
 }
+EOF
 ```
 
 ```
@@ -189,23 +218,26 @@ Phase 1 완료. 플랜이 승인되었습니다. Phase 2→3→4를 자동으로
 
 워크트리와 브랜치를 생성합니다.
 
-### 2-1. 워크트리 생성
+### 2-1. Feature 브랜치 + 워크트리 생성
 
 ```bash
-# git gtr 사용 가능 시
-git gtr new {branch-name}
-
-# 없으면 수동
+# 브랜치 생성 + 워크트리로 체크아웃
 git worktree add .worktrees/{slug} -b {branch-name}
 ```
 
-`git gtr new`는 `.env` 복사 + `pnpm install`을 자동 실행합니다.
-
-### 2-2. 수동 생성 시 의존성 설치
+### 2-2. 의존성 설치
 
 ```bash
 cd .worktrees/{slug}
-cp ../.env .env
+
+# .env 파일 복사 (없으면 .env.example 사용)
+if [ -f ../.env ]; then
+  cp ../.env .env
+elif [ -f ../.claude/.env.example ]; then
+  cp ../.claude/.env.example .env
+  echo "⚠️  .env.example을 복사했습니다. 토큰을 입력하세요."
+fi
+
 pnpm install
 ```
 
@@ -217,7 +249,10 @@ cp -r plans/ .worktrees/{slug}/plans/
 
 ### 2-4. 상태 업데이트 → Phase 3로 자동 연결
 
-phase → `"develop"`
+```bash
+# state 파일의 phase 값을 "develop"으로 업데이트
+jq '.phase = "develop"' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
+```
 
 **멈추지 않고 바로 Phase 3를 실행합니다.**
 
@@ -247,16 +282,40 @@ state 파일에서 `worktree` 경로를 읽어 해당 디렉토리에서 작업�
 
 ```bash
 cd .worktrees/{slug}
-pnpm biome check --write .
-pnpm build
-pnpm test:e2e:gifca
 ```
 
-실패 시 수정 후 재실행.
+**검증 루프 실행 (최대 3회 시도):**
+
+```
+attempt = 0
+
+while attempt < 3:
+  attempt++
+
+  1. pnpm biome check --write .
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  2. pnpm build
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  3. pnpm test:e2e:gifca
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  4. 모두 성공 → 루프 종료 (break)
+
+if attempt == 3:
+  에러 로그 출력
+  "검증 3회 실패. 다음 에러를 확인하세요: [마지막 에러]"
+  Phase 중단 (다음 Phase로 넘어가지 않음)
+```
 
 ### 3-4. 상태 업데이트 → Phase 4로 자동 연결
 
-phase → `"done"`
+```bash
+# 메인 프로젝트 루트로 이동 후 state 파일 업데이트
+cd ../..
+jq '.phase = "done"' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
+```
 
 **멈추지 않고 바로 Phase 4를 실행합니다.**
 
@@ -272,15 +331,30 @@ phase → `"done"`
 cd .worktrees/{slug}
 ```
 
-```
-LOOP (max 3):
-  1. pnpm biome check --write .
-  2. pnpm build          → 실패 시 수정, 재시작
-  3. pnpm test:e2e:gifca → 실패 시 수정, 재시작
-  4. All green → EXIT
-```
+**검증 루프 실행 (최대 3회 시도):**
 
-3회 실패 시 사용자에게 보고 후 중단.
+```
+attempt = 0
+
+while attempt < 3:
+  attempt++
+
+  1. pnpm biome check --write .
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  2. pnpm build
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  3. pnpm test:e2e:gifca
+     → 실패 시: 에러 수정 → 처음부터 재시작 (continue)
+
+  4. 모두 성공 → 루프 종료 (break)
+
+if attempt == 3:
+  에러 로그 출력
+  "검증 3회 실패. 다음 에러를 확인하세요: [마지막 에러]"
+  Phase 중단 (다음 Phase로 넘어가지 않음)
+```
 
 ### 4-2. 에이전트 선별 및 병렬 리뷰
 
@@ -306,7 +380,24 @@ git diff --name-only HEAD
 
 **Step 3: 선별된 에이전트를 하나의 응답에서 병렬 호출**
 
-> **반드시 선별된 모든 Task를 한 번에 병렬 호출하세요. 순차 실행하지 마세요.**
+> **중요: 선별된 모든 Task를 한 번의 응답에 모두 포함해서 병렬 실행하세요.**
+
+**❌ 잘못된 예시 (순차 실행):**
+```
+1. Code Review Task 호출 → 결과 대기
+2. 결과 확인 후 Convention Task 호출 → 결과 대기
+3. 결과 확인 후 Security Task 호출
+```
+
+**✅ 올바른 예시 (병렬 실행):**
+```
+한 번의 응답에 3개 Task tool을 모두 포함:
+- Task: Code Review
+- Task: Convention Review
+- Task: Security Review
+
+(3개가 동시에 실행되고, 모든 결과를 한 번에 수집)
+```
 
 각 에이전트의 Task tool 호출 형식:
 
@@ -359,6 +450,15 @@ git commit -m "{type}({scope}): {description}"
 git push -u origin {branch}
 
 gh pr create --title "{type}({scope}): {description}" --body "$(cat <<'EOF'
+<!-- PR 작성 가이드:
+- 모든 {placeholder}를 실제 값으로 치환하세요
+- 필수 섹션: 개요, 주요 변경사항, 핵심 구현, API 스펙, 테스트
+- 선택 섹션 (해당 시만 포함):
+  * DB 변경사항 (스키마 변경 시)
+  * 변경 전/후 비교 (리팩토링 시)
+- 해당 없는 섹션은 제거하고, "해당 없음"으로 남기지 마세요
+-->
+
 ## 개요
 {이 PR이 왜 필요한지 1-2문장}
 
@@ -376,46 +476,161 @@ gh pr create --title "{type}({scope}): {description}" --body "$(cat <<'EOF'
 |------|----------|
 | `src/path/to/module.ts` | {무엇을 왜 변경했는지} |
 
+## 핵심 구현
+
+### Entity 설계
+\`\`\`typescript
+// src/domain/{entity}/{entity}.entity.ts (핵심 메서드만)
+class {EntityName} {
+  private constructor(
+    public readonly id: {Id},
+    private _field: {Type},
+  ) {}
+
+  static create(params: Create{Name}Params): Result<{EntityName}> {
+    // 도메인 규칙 검증 로직
+  }
+
+  public method(): Result<void> {
+    // 비즈니스 로직
+  }
+}
+\`\`\`
+
+### Use Case 흐름
+\`\`\`typescript
+// src/application/{usecase}/{action}.use-case.ts
+@Transactional()
+async execute(dto: {Action}Dto): Promise<{Response}Dto> {
+  // 1. 선행 조건 검증 (사용자/권한/리소스 존재 확인)
+  // 2. 도메인 Entity 생성/수정
+  // 3. Repository 저장
+  // 4. 이벤트 발행 (필요 시)
+  // 5. 응답 DTO 생성
+}
+\`\`\`
+
+## 처리 흐름
+
+\`\`\`
+[요청] → [DTO 검증] → [선행 조건 확인] → [도메인 로직]
+   ↓         ↓ 실패: 400       ↓ 실패: 404/409     ↓
+[트랜잭션 시작]                              [Entity 생성/수정]
+   ↓                                             ↓
+[DB 저장] → [이벤트 발행] → [커밋] → [응답 201/200]
+\`\`\`
+
+## API 스펙
+
+### 성공 케이스
+**Request:**
+\`\`\`bash
+{METHOD} /api/v1/{resource}
+Content-Type: application/json
+
+{
+  "field": "value"
+}
+\`\`\`
+
+**Response ({status}):**
+\`\`\`json
+{
+  "id": "...",
+  "field": "value",
+  "createdAt": "2026-02-10T12:34:56Z"
+}
+\`\`\`
+
+### 에러 케이스
+| Status | Error Code | 설명 | 응답 예시 |
+|--------|------------|------|----------|
+| 400 | `VALIDATION_ERROR` | DTO 검증 실패 | `{"error": "VALIDATION_ERROR", "message": "..."}` |
+| 401 | `UNAUTHORIZED` | 인증 실패 | `{"error": "UNAUTHORIZED"}` |
+| 404 | `{RESOURCE}_NOT_FOUND` | 리소스 없음 | `{"error": "USER_NOT_FOUND"}` |
+| 409 | `{RESOURCE}_CONFLICT` | 중복/상태 충돌 | `{"error": "ALREADY_EXISTS"}` |
+
+## DB 변경사항
+
+### 신규 테이블/컬럼
+\`\`\`sql
+-- 신규 테이블 (또는 ALTER TABLE ...)
+CREATE TABLE {table_name} (
+  id VARCHAR(255) PRIMARY KEY,
+  field VARCHAR(500) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+  INDEX idx_{field} ({field}),
+  FOREIGN KEY (fk_id) REFERENCES {ref_table}(id)
+);
+\`\`\`
+
+### 인덱스 전략
+- `idx_{field}`: {쿼리 패턴 설명 — 왜 필요한지}
+- `idx_composite`: {복합 인덱스 이유}
+
+### 마이그레이션 주의사항
+- {데이터 손실 가능성, 롤백 방법, 배포 순서 등}
+
 ## 구현 상세
 
 ### Domain Layer
-- Entity: {설계 결정 사항}
-- Repository Interface: {메서드 시그니처 요약}
+- **Entity**: {핵심 비즈니스 규칙 — 불변식, 검증 로직}
+- **Repository Interface**: {메서드 시그니처 — findById, save 등}
+- **Domain Error**: {커스텀 에러 종류}
 
 ### Infrastructure Layer
-- Mapper: {변환 로직}
-- Repository Impl: {쿼리 방식, 인덱스 활용}
+- **Mapper**: {toDomain/toPersistence 변환 로직 — 특이사항}
+- **Repository Impl**: {쿼리 방식 — raw SQL/ORM, JOIN 사용 여부, 인덱스 활용}
 
 ### Application Layer
-- Use Case: {비즈니스 로직 흐름}
-- Controller: {엔드포인트 스펙 — method, path, req/res 요약}
-- DTO: {검증 규칙}
+- **Use Case**: {비즈니스 로직 흐름 — 트랜잭션 범위, 이벤트 발행}
+- **Controller**: `{METHOD} /api/v1/{path}` — 권한 체크, DTO 검증
+- **DTO**: {class-validator 규칙 — @IsString, @Min 등}
 
-## API 스펙
-| Method | Path | Request | Response | 설명 |
-|--------|------|---------|----------|------|
-| `POST` | `/api/v1/...` | `{ field: type }` | `{ field: type }` | {설명} |
+## 변경 전/후 비교 (리팩토링 시)
+
+### Before (문제점)
+\`\`\`typescript
+// {문제 설명 — N+1, 중복 로직, 복잡도 등}
+{기존 코드 핵심 부분}
+\`\`\`
+
+### After (개선)
+\`\`\`typescript
+// {개선 내용 — JOIN, 추출, 단순화 등}
+{새 코드 핵심 부분}
+\`\`\`
+
+### 성능 개선
+- {쿼리 횟수, 실행 시간, 메모리 사용량 등 측정 가능한 지표}
 
 ## 에이전트 리뷰 결과
-- Code Review: {요약}
-- Security: {요약}
-- Database: {요약}
-- NestJS Pattern: {요약}
-- Convention: {요약}
+- **Code Review**: {요약}
+- **Security**: {요약}
+- **Database**: {요약}
+- **NestJS Pattern**: {요약}
+- **Convention**: {요약}
 
 ## 테스트
+
+### E2E 테스트
 - [x] `pnpm biome check` 통과
 - [x] `pnpm build` 통과
 - [x] E2E 테스트 추가 ({N}개 케이스)
-  - [x] 성공 케이스
-  - [x] 400 Bad Request
-  - [x] 401 Unauthorized
-  - [x] 404 Not Found
-  - [x] 409 Conflict (해당 시)
+  - [x] ✅ 성공 케이스 (201/200)
+  - [x] ❌ 400 Bad Request (DTO 검증 실패)
+  - [x] ❌ 401 Unauthorized (인증 실패)
+  - [x] ❌ 404 Not Found (리소스 없음)
+  - [x] ❌ 409 Conflict (중복/상태 충돌)
 - [x] 기존 테스트 통과
+
+### 테스트 커버리지
+- {Entity/UseCase 단위 테스트 여부, 주요 경로 커버리지}
 
 ## 참고사항
 - {리뷰어가 알아야 할 컨텍스트, 트레이드오프, 후속 작업 등}
+- {Breaking Change 여부, API 버전 변경, 마이그레이션 필요 여부}
 EOF
 )"
 ```
@@ -428,7 +643,14 @@ mcp__jira__jira_transition_issue({ issue_key: "{JIRA-KEY}", transition: "In Revi
 
 ### 4-6. 상태 업데이트
 
-phase → `"pr"`, state에 `"pr_url"` 추가.
+```bash
+# 프로젝트 루트로 이동
+cd ../..
+
+# PR URL 추출 후 state 파일 업데이트
+PR_URL=$(gh pr view {branch} --json url -q .url)
+jq --arg url "$PR_URL" '.phase = "pr" | .pr_url = $url' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
+```
 
 ```
 Phase 4 완료. PR이 생성되었습니다.
@@ -511,7 +733,8 @@ PR 병합 확인 후 워크트리와 브랜치를 정리합니다.
 **Bash 한 번으로 전부 처리합니다:**
 
 ```bash
-bash {CLAUDE_PLUGIN_ROOT}/scripts/orchestrate-clean.sh {project-root} {slug} {branch}
+# .claude 디렉토리에서 정리 스크립트 실행
+bash .claude/scripts/orchestrate-clean.sh $(pwd) {slug} {branch}
 ```
 
 이 스크립트가 자동으로:
