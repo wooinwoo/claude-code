@@ -685,6 +685,11 @@ PR_URL=$(gh pr view {branch} --json url -q .url)
 jq --arg url "$PR_URL" '.phase = "pr" | .pr_url = $url' .orchestrate/{slug}.json > .orchestrate/{slug}.json.tmp && mv .orchestrate/{slug}.json.tmp .orchestrate/{slug}.json
 ```
 
+```bash
+# 시스템 알림
+node .claude/scripts/notify.cjs "orchestrate" "PR 생성 완료: {branch}"
+```
+
 ```
 Phase 4 완료. PR이 생성되었습니다.
 - PR: {URL}

@@ -21,3 +21,7 @@ CLAUDE.local.md
 # Environment files
 .env
 .env.local
+
+# Node modules (scripts/)
+node_modules/
+base/scripts/node_modules/

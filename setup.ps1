@@ -187,6 +187,19 @@ Copy-LayerDir `
     -Label "scripts/" `
     -Sources @("$WiwRoot\base\scripts") -Recurse
 
+# scripts/ npm install (node-notifier 등)
+$scriptsPkg = Join-Path $scriptsDir "package.json"
+if (Test-Path $scriptsPkg) {
+    $nodeModules = Join-Path $scriptsDir "node_modules"
+    if (-not (Test-Path $nodeModules)) {
+        Write-Host "  [NPM] scripts/ 의존성 설치 중..." -ForegroundColor Yellow
+        Push-Location $scriptsDir
+        npm install --silent 2>$null
+        Pop-Location
+        Write-Host "  [OK] node-notifier 설치 완료" -ForegroundColor Green
+    }
+}
+
 # ============================================================
 # scripts-wiw/ - 파일 복사 (common: MCP 래퍼 스크립트)
 # ============================================================

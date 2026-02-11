@@ -241,7 +241,13 @@ if (jira_key) {
 }
 ```
 
-### 5-4. 완료 메시지
+### 5-4. 시스템 알림
+
+```bash
+node .claude/scripts/notify.cjs "fix 완료" "{jira_key || title}: 커밋/푸시 완료"
+```
+
+### 5-5. 완료 메시지
 
 ```
 ✅ 수정 완료!
