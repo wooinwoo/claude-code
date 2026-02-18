@@ -119,6 +119,21 @@ for (const file of ['style.css', 'app.js']) {
     } catch { res.writeHead(404); res.end('Not found'); }
   });
 }
+// Serve PWA files
+addRoute('GET', '/manifest.json', async (_req, res) => {
+  try {
+    const content = await readFile(join(__dirname, 'manifest.json'), 'utf8');
+    res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8' });
+    res.end(content);
+  } catch { res.writeHead(404); res.end('Not found'); }
+});
+addRoute('GET', '/sw.js', async (_req, res) => {
+  try {
+    const content = await readFile(join(__dirname, 'sw.js'), 'utf8');
+    res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Service-Worker-Allowed': '/' });
+    res.end(content);
+  } catch { res.writeHead(404); res.end('Not found'); }
+});
 // Serve JS modules from js/ directory
 addRoute('GET', '/js/:filename', async (req, res) => {
   const filename = req.params.filename;
@@ -1249,9 +1264,21 @@ wss.on('connection', (ws) => {
 
 // ──────────── Start ────────────
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n  Claude Code Dashboard`);
-  console.log(`  http://localhost:${PORT}\n`);
+  console.log(`  http://localhost:${PORT}`);
+  // Show LAN IP for mobile access
+  try {
+    const nets = require('os').networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          console.log(`  http://${net.address}:${PORT} (LAN)`);
+        }
+      }
+    }
+  } catch {}
+  console.log('');
   if (!process.argv.includes('--no-open')) {
     spawn('cmd', ['/c', 'start', `http://localhost:${PORT}`], { detached: true, stdio: 'ignore' }).unref();
   }
