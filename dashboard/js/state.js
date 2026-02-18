@@ -67,6 +67,7 @@ export const app = {
 
   // Project filter
   _projectStatusFilter: 'all',
+  _cardSortBy: localStorage.getItem('dl-card-sort') || 'name',
 
   // Cards
   _renderedCardIds: [],

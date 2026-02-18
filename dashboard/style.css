@@ -4739,3 +4739,93 @@ dialog::backdrop {
   font-weight: 600;
   background: var(--bg-0);
 }
+
+/* ─── Syntax Highlighting ─── */
+.hl-comment { color: #6a737d; font-style: italic; }
+.hl-string { color: #a5d6ff; }
+.hl-keyword { color: #d2a8ff; font-weight: 500; }
+.hl-number { color: #ffa657; }
+.hl-type { color: #79c0ff; }
+.hl-tag { color: #7ee787; }
+.hl-attr { color: #d2a8ff; }
+.dl-add .hl-comment { color: #5c7a55; }
+.dl-add .hl-string { color: #7fb89e; }
+.dl-add .hl-keyword { color: #a8c4a0; }
+.dl-add .hl-number { color: #c4b07a; }
+.dl-add .hl-type { color: #6ba388; }
+.dl-del .hl-comment { color: #7a5555; }
+.dl-del .hl-string { color: #b58f8f; }
+.dl-del .hl-keyword { color: #c0a0a8; }
+.dl-del .hl-number { color: #c4a07a; }
+.dl-del .hl-type { color: #8f7a7a; }
+.light-theme .hl-comment { color: #6a737d; }
+.light-theme .hl-string { color: #032f62; }
+.light-theme .hl-keyword { color: #d73a49; font-weight: 600; }
+.light-theme .hl-number { color: #005cc5; }
+.light-theme .hl-type { color: #6f42c1; }
+.light-theme .hl-tag { color: #22863a; }
+.light-theme .hl-attr { color: #6f42c1; }
+
+/* ─── Stash Dialog ─── */
+.stash-dialog {
+  background: var(--bg-2);
+  color: var(--text-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  min-width: 420px;
+  max-width: 600px;
+  max-height: 70vh;
+  box-shadow: var(--shadow-lg);
+}
+.stash-dialog::backdrop { background: rgba(0,0,0,.55); }
+.stash-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.stash-dialog-head h3 { font-size: .9rem; font-weight: 600; }
+.stash-list-body {
+  overflow-y: auto;
+  max-height: 55vh;
+}
+.stash-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.stash-item:hover { background: var(--bg-surface-hover); }
+.stash-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.stash-ref { font-size: .72rem; font-family: var(--mono); color: var(--accent-bright); }
+.stash-msg { font-size: .8rem; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stash-ago { font-size: .68rem; color: var(--text-3); }
+.stash-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.stash-actions .btn { font-size: .7rem; padding: 3px 8px; }
+
+/* ─── Card Sort Select ─── */
+.card-sort-select {
+  background: var(--bg-3);
+  color: var(--text-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 3px 6px;
+  font-size: .72rem;
+  font-family: var(--font);
+  cursor: pointer;
+  outline: none;
+  margin-left: 6px;
+}
+.card-sort-select:hover { border-color: var(--border-hover); }
+.card-sort-select:focus { border-color: var(--border-active); }
+.light-theme .card-sort-select {
+  background: var(--bg-1);
+  color: var(--text-0);
+}
+.light-theme .stash-dialog {
+  background: var(--bg-1);
+}

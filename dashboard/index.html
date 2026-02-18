@@ -309,6 +309,12 @@
               </button>
             </div>
             <span class="project-search-count" id="project-search-count"></span>
+            <select id="card-sort-select" class="card-sort-select" onchange="setProjectSort(this.value)" title="Sort projects">
+              <option value="name">Name</option>
+              <option value="activity">Activity</option>
+              <option value="recent">Recent</option>
+              <option value="uncommitted">Uncommitted</option>
+            </select>
           </div>
           <div class="project-grid-wrap">
             <div class="scroll-ind left hidden" id="scroll-ind-left"></div>
@@ -588,6 +594,27 @@
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
               Pop
+            </button>
+            <button
+              class="dt-act-btn"
+              id="dt-stash-list-btn"
+              onclick="showStashList()"
+              title="Stash List"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              List
             </button>
           </div>
         </div>
@@ -1295,6 +1322,15 @@
         </table>
       </div>
     </div>
+
+    <!-- Stash List Dialog -->
+    <dialog id="stash-list-dialog" class="stash-dialog">
+      <div class="stash-dialog-head">
+        <h3>Stash List</h3>
+        <button onclick="this.closest('dialog').close()" class="btn">&times;</button>
+      </div>
+      <div class="stash-list-body"></div>
+    </dialog>
 
     <script type="module" src="js/main.js"></script>
   </body>

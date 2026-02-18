@@ -1,6 +1,7 @@
 // ─── Diff: Changes tab, diff rendering, git ops, auto-commit, branches ───
 import { app } from './state.js';
 import { esc, showToast, DIFF_LINE_LIMIT } from './utils.js';
+import { highlightLine, getLangFromPath } from './highlight.js';
 
 // ─── Diff Utilities ───
 function parseDiffToFiles(diffText) {
@@ -13,7 +14,8 @@ function parseDiffToFiles(diffText) {
   });
 }
 
-function renderDiffTable(lines) {
+function renderDiffTable(lines, filePath) {
+  const lang = getLangFromPath(filePath);
   let oldN = 0, newN = 0, prevOldEnd = 0, prevNewEnd = 0, hunkCount = 0;
   const rows = [];
   let rowCount = 0;
@@ -35,25 +37,27 @@ function renderDiffTable(lines) {
       rows.push(`<tr class="dl-hunk"><td class="dl-gutter" colspan="2"></td><td class="dl-code">${esc(line)}</td></tr>`);
       hunkCount++; continue;
     }
+    const hl = lang ? highlightLine(line, lang) : esc(line);
     if (line.startsWith('+')) {
-      rows.push(`<tr class="dl-add"><td class="dl-gutter"></td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${esc(line)}</td></tr>`);
+      rows.push(`<tr class="dl-add"><td class="dl-gutter"></td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${hl}</td></tr>`);
       newN++; prevNewEnd = newN;
     } else if (line.startsWith('-')) {
-      rows.push(`<tr class="dl-del"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new"></td><td class="dl-code">${esc(line)}</td></tr>`);
+      rows.push(`<tr class="dl-del"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new"></td><td class="dl-code">${hl}</td></tr>`);
       oldN++; prevOldEnd = oldN;
     } else if (line !== '') {
-      rows.push(`<tr class="dl-ctx"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${esc(line)}</td></tr>`);
+      rows.push(`<tr class="dl-ctx"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${hl}</td></tr>`);
       oldN++; newN++; prevOldEnd = oldN; prevNewEnd = newN;
     }
     rowCount++;
   }
   if (truncated) {
-    rows.push(`<tr class="dl-truncated"><td colspan="3" style="padding:8px 12px;text-align:center;color:var(--text-3);font-size:.78rem;background:var(--bg-surface);cursor:pointer" onclick="this.closest('.diff-panel-body').innerHTML=renderDiffTableFull(this.closest('.diff-panel-body').dataset.lines)">Showing ${DIFF_LINE_LIMIT} of ${totalLines} lines \u2014 click to show all</td></tr>`);
+    rows.push(`<tr class="dl-truncated"><td colspan="3" style="padding:8px 12px;text-align:center;color:var(--text-3);font-size:.78rem;background:var(--bg-surface);cursor:pointer" onclick="this.closest('.diff-panel-body').innerHTML=renderDiffTableFull(this.closest('.diff-panel-body').dataset.lines,this.closest('.diff-panel-body').dataset.filePath||'')">Showing ${DIFF_LINE_LIMIT} of ${totalLines} lines \u2014 click to show all</td></tr>`);
   }
   return `<table>${rows.join('')}</table>`;
 }
 
-export function renderDiffTableFull(linesJson) {
+export function renderDiffTableFull(linesJson, filePath) {
+  const lang = getLangFromPath(filePath || '');
   const lines = JSON.parse(linesJson);
   let oldN = 0, newN = 0, prevOldEnd = 0, prevNewEnd = 0, hunkCount = 0;
   const rows = [];
@@ -71,14 +75,15 @@ export function renderDiffTableFull(linesJson) {
       rows.push(`<tr class="dl-hunk"><td class="dl-gutter" colspan="2"></td><td class="dl-code">${esc(line)}</td></tr>`);
       hunkCount++; continue;
     }
+    const hl2 = lang ? highlightLine(line, lang) : esc(line);
     if (line.startsWith('+')) {
-      rows.push(`<tr class="dl-add"><td class="dl-gutter"></td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${esc(line)}</td></tr>`);
+      rows.push(`<tr class="dl-add"><td class="dl-gutter"></td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${hl2}</td></tr>`);
       newN++; prevNewEnd = newN;
     } else if (line.startsWith('-')) {
-      rows.push(`<tr class="dl-del"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new"></td><td class="dl-code">${esc(line)}</td></tr>`);
+      rows.push(`<tr class="dl-del"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new"></td><td class="dl-code">${hl2}</td></tr>`);
       oldN++; prevOldEnd = oldN;
     } else if (line !== '') {
-      rows.push(`<tr class="dl-ctx"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${esc(line)}</td></tr>`);
+      rows.push(`<tr class="dl-ctx"><td class="dl-gutter">${oldN}</td><td class="dl-gutter dl-gutter-new">${newN}</td><td class="dl-code">${hl2}</td></tr>`);
       oldN++; newN++; prevOldEnd = oldN; prevNewEnd = newN;
     }
   }
@@ -187,8 +192,10 @@ function renderDiffPanels(targetId, stagedFiles, unstagedFiles, stagedDiff, unst
       const panel = document.getElementById(pid);
       if (panel) {
         const body = panel.querySelector('.diff-panel-body');
+        const fp = f?.file || p.path || '';
         if (p.lines.length > DIFF_LINE_LIMIT) body.dataset.lines = JSON.stringify(p.lines);
-        body.innerHTML = renderDiffTable(p.lines);
+        body.dataset.filePath = fp;
+        body.innerHTML = renderDiffTable(p.lines, fp);
       }
     }
   };
@@ -660,3 +667,78 @@ const _commitMsgKey = 'cockpit-commit-msg';
 export function saveCommitMsg() { const el = document.getElementById('commit-msg-input'); if (el && el.value.trim()) localStorage.setItem(_commitMsgKey, el.value); }
 export function restoreCommitMsg() { const el = document.getElementById('commit-msg-input'); const saved = localStorage.getItem(_commitMsgKey); if (el && saved && !el.value) el.value = saved; }
 export function clearCommitMsg() { localStorage.removeItem(_commitMsgKey); const el = document.getElementById('commit-msg-input'); if (el) el.value = ''; }
+
+// ─── Stash List Viewer ───
+export async function showStashList() {
+  const pid = getDiffProjectId();
+  if (!pid) return showToast('Select a project first', 'error');
+  const dialog = document.getElementById('stash-list-dialog');
+  if (!dialog) return;
+  const body = dialog.querySelector('.stash-list-body');
+  body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3)">Loading...</div>';
+  dialog.showModal();
+  try {
+    const res = await fetch(`/api/projects/${pid}/stash-list`);
+    const data = await res.json();
+    if (!data.stashes?.length) {
+      body.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-3)">No stashes</div>';
+      return;
+    }
+    body.innerHTML = data.stashes.map(s => `
+      <div class="stash-item">
+        <div class="stash-info">
+          <span class="stash-ref">${esc(s.ref)}</span>
+          <span class="stash-msg">${esc(s.message)}</span>
+          <span class="stash-ago">${esc(s.ago)}</span>
+        </div>
+        <div class="stash-actions">
+          <button class="btn" onclick="doStashApply('${esc(s.ref).replace(/'/g, "\\'")}')">Apply</button>
+          <button class="btn" onclick="doStashPopRef('${esc(s.ref).replace(/'/g, "\\'")}')">Pop</button>
+          <button class="btn" onclick="doStashDrop('${esc(s.ref).replace(/'/g, "\\'")}')">Drop</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    body.innerHTML = `<div style="padding:20px;text-align:center;color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+export async function doStashApply(ref) {
+  const pid = getDiffProjectId(); if (!pid) return;
+  try {
+    const res = await fetch(`/api/projects/${pid}/git/stash-apply`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref })
+    });
+    const data = await res.json();
+    if (data.error) showToast('Stash apply failed: ' + data.error, 'error');
+    else { showToast('Stash applied', 'success'); loadDiff(); }
+  } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}
+
+export async function doStashPopRef(ref) {
+  const pid = getDiffProjectId(); if (!pid) return;
+  try {
+    const res = await fetch(`/api/projects/${pid}/git/stash-pop`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref })
+    });
+    const data = await res.json();
+    if (data.error) showToast('Stash pop failed: ' + data.error, 'error');
+    else { showToast('Stash popped', 'success'); showStashList(); loadDiff(); }
+  } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}
+
+export async function doStashDrop(ref) {
+  if (!confirm(`Drop ${ref}? This cannot be undone.`)) return;
+  const pid = getDiffProjectId(); if (!pid) return;
+  try {
+    const res = await fetch(`/api/projects/${pid}/git/stash-drop`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref })
+    });
+    const data = await res.json();
+    if (data.error) showToast('Stash drop failed: ' + data.error, 'error');
+    else { showToast('Stash dropped', 'success'); showStashList(); }
+  } catch (err) { showToast('Error: ' + err.message, 'error'); }
+}

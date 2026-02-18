@@ -694,10 +694,41 @@ addRoute('POST', '/api/projects/:id/git/stash', async (req, res) => {
 addRoute('POST', '/api/projects/:id/git/stash-pop', async (req, res) => {
   const project = getProjectById(req.params.id);
   if (!project) return json(res, { error: 'Not found' }, 404);
+  const body = await readBody(req);
+  const winPath = project.path.replace(/\//g, '\\');
+  try {
+    await withGitLock(project.id, () => {
+      const args = ['-C', winPath, 'stash', 'pop'];
+      if (body.ref) args.push(body.ref);
+      return execFileAsync('git', args, { timeout: 10000, maxBuffer: 1024 * 1024 });
+    });
+    json(res, { success: true });
+  } catch (err) { json(res, { error: err.message }, 500); }
+});
+
+addRoute('POST', '/api/projects/:id/git/stash-apply', async (req, res) => {
+  const project = getProjectById(req.params.id);
+  if (!project) return json(res, { error: 'Not found' }, 404);
+  const body = await readBody(req);
+  const ref = body.ref || 'stash@{0}';
   const winPath = project.path.replace(/\//g, '\\');
   try {
     await withGitLock(project.id, () =>
-      execFileAsync('git', ['-C', winPath, 'stash', 'pop'], { timeout: 10000, maxBuffer: 1024 * 1024 })
+      execFileAsync('git', ['-C', winPath, 'stash', 'apply', ref], { timeout: 10000, maxBuffer: 1024 * 1024 })
+    );
+    json(res, { success: true });
+  } catch (err) { json(res, { error: err.message }, 500); }
+});
+
+addRoute('POST', '/api/projects/:id/git/stash-drop', async (req, res) => {
+  const project = getProjectById(req.params.id);
+  if (!project) return json(res, { error: 'Not found' }, 404);
+  const body = await readBody(req);
+  const ref = body.ref || 'stash@{0}';
+  const winPath = project.path.replace(/\//g, '\\');
+  try {
+    await withGitLock(project.id, () =>
+      execFileAsync('git', ['-C', winPath, 'stash', 'drop', ref], { timeout: 10000, maxBuffer: 1024 * 1024 })
     );
     json(res, { success: true });
   } catch (err) { json(res, { error: err.message }, 500); }

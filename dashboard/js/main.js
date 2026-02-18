@@ -11,7 +11,7 @@ import {
   savePins, togglePin, sortAndRenderProjects, toggleNotifications,
   isNotifEnabledForProject, saveNotifFilter, toggleProjectNotif,
   setProjectFilter, filterProjects, fetchAllProjects, updateScrollIndicators,
-  jumpToChanges, onVisibilityChange,
+  jumpToChanges, onVisibilityChange, setProjectSort,
 } from './dashboard.js';
 
 // ─── Terminal module ───
@@ -37,6 +37,7 @@ import {
   doPull, doFetch, doStash, doStashPop,
   createBranch, deleteBranch,
   saveCommitMsg, restoreCommitMsg, clearCommitMsg,
+  showStashList, doStashApply, doStashPopRef, doStashDrop,
 } from './diff.js';
 
 // ─── Modals module ───
@@ -278,6 +279,7 @@ window.fetchAllProjects = fetchAllProjects;
 window.jumpToChanges = jumpToChanges;
 window.updateSummaryStats = updateSummaryStats;
 window.updateScrollIndicators = updateScrollIndicators;
+window.setProjectSort = setProjectSort;
 
 // Terminal
 window.renderLayout = renderLayout;
@@ -327,6 +329,10 @@ window.doStash = doStash;
 window.doStashPop = doStashPop;
 window.createBranch = createBranch;
 window.deleteBranch = deleteBranch;
+window.showStashList = showStashList;
+window.doStashApply = doStashApply;
+window.doStashPopRef = doStashPopRef;
+window.doStashDrop = doStashDrop;
 
 // Modals
 window.openSettingsPanel = openSettingsPanel;
@@ -526,6 +532,9 @@ async function init() {
   fetch('/api/notify/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: app.notifyEnabled }) }).catch(() => {});
   // Restore chart period
   if (app.chartPeriod !== 30) setChartPeriod(app.chartPeriod);
+  // Restore card sort
+  const sortSel = document.getElementById('card-sort-select');
+  if (sortSel) sortSel.value = app._cardSortBy || 'name';
   // Restore terminal font size display
   const fse = document.getElementById('term-font-size');
   if (fse) fse.textContent = app.termFontSize;

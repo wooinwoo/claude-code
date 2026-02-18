@@ -493,11 +493,41 @@ export function togglePin(id) {
   sortAndRenderProjects();
 }
 
+export function setProjectSort(sortBy) {
+  app._cardSortBy = sortBy;
+  localStorage.setItem('dl-card-sort', sortBy);
+  const sel = document.getElementById('card-sort-select');
+  if (sel) sel.value = sortBy;
+  sortAndRenderProjects();
+}
+
 export function sortAndRenderProjects() {
   const sorted = [...app.projectList].sort((a, b) => {
+    // Pinned first
     const ap = app.pinnedProjects.has(a.id) ? 0 : 1;
     const bp = app.pinnedProjects.has(b.id) ? 0 : 1;
-    return ap - bp;
+    if (ap !== bp) return ap - bp;
+    // Then by selected sort
+    const sort = app._cardSortBy || 'name';
+    if (sort === 'activity') {
+      const sa = app.state.projects.get(a.id)?.session;
+      const sb = app.state.projects.get(b.id)?.session;
+      const stateOrder = { busy: 0, waiting: 1, idle: 2, no_data: 3, no_sessions: 4 };
+      const oa = stateOrder[sa?.state] ?? 3;
+      const ob = stateOrder[sb?.state] ?? 3;
+      if (oa !== ob) return oa - ob;
+    }
+    if (sort === 'recent') {
+      const ta = app.state.projects.get(a.id)?.session?.lastActivity || '';
+      const tb = app.state.projects.get(b.id)?.session?.lastActivity || '';
+      if (ta !== tb) return ta > tb ? -1 : 1;
+    }
+    if (sort === 'uncommitted') {
+      const ua = app.state.projects.get(a.id)?.git?.uncommittedCount || 0;
+      const ub = app.state.projects.get(b.id)?.git?.uncommittedCount || 0;
+      if (ua !== ub) return ub - ua;
+    }
+    return (a.name || '').localeCompare(b.name || '');
   });
   app._renderedCardIds = [];
   renderAllCards(sorted);
