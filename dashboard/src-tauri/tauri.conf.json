@@ -1,0 +1,51 @@
+{
+  "productName": "Cockpit",
+  "version": "1.0.0",
+  "identifier": "com.cockpit.dashboard",
+  "build": {
+    "frontendDist": "http://localhost:3847"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Cockpit",
+        "width": 1400,
+        "height": 900,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../server.js": "./",
+      "../index.html": "./",
+      "../lib/*": "./lib/",
+      "../package.json": "./",
+      "../node_modules/*": "./node_modules/",
+      "../node_modules/node-addon-api/*": "./node_modules/node-addon-api/",
+      "../node_modules/node-addon-api/tools/*": "./node_modules/node-addon-api/tools/",
+      "../node_modules/node-pty/*": "./node_modules/node-pty/",
+      "../node_modules/node-pty/build/Release/conpty/*": "./node_modules/node-pty/build/Release/conpty/",
+      "../node_modules/node-pty/lib/*": "./node_modules/node-pty/lib/",
+      "../node_modules/node-pty/lib/shared/*": "./node_modules/node-pty/lib/shared/",
+      "../node_modules/node-pty/lib/worker/*": "./node_modules/node-pty/lib/worker/",
+      "../node_modules/node-pty/prebuilds/win32-x64/*": "./node_modules/node-pty/prebuilds/win32-x64/",
+      "../node_modules/node-pty/prebuilds/win32-x64/conpty/*": "./node_modules/node-pty/prebuilds/win32-x64/conpty/",
+      "../node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/*": "./node_modules/node-pty/third_party/conpty/1.23.251008001/win10-x64/",
+      "../node_modules/node-pty/typings/*": "./node_modules/node-pty/typings/",
+      "../node_modules/node-pty/scripts/*": "./node_modules/node-pty/scripts/",
+      "../node_modules/ws/*": "./node_modules/ws/",
+      "../node_modules/ws/lib/*": "./node_modules/ws/lib/"
+    }
+  }
+}

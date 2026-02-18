@@ -1,0 +1,2 @@
+cargo:rustc-link-search=native=C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\webview2-com-sys-e479d7fc6cecf64d\out\x64
+cargo:rustc-link-lib=advapi32

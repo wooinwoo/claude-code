@@ -1,0 +1,14 @@
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\deps\serde-5e5cd57e7c41420d.d: C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\serde-9ac4b6ade58af839\out/private.rs
+
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\deps\libserde-5e5cd57e7c41420d.rlib: C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\serde-9ac4b6ade58af839\out/private.rs
+
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\deps\libserde-5e5cd57e7c41420d.rmeta: C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\serde-9ac4b6ade58af839\out/private.rs
+
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\lib.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\integer128.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\mod.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\de.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.228\src\private\ser.rs:
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\serde-9ac4b6ade58af839\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\_project\\template\\wiw_claude-code\\dashboard\\src-tauri\\target\\release\\build\\serde-9ac4b6ade58af839\\out

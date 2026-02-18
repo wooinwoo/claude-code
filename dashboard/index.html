@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cockpit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="preload"
+      href="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+      as="script"
+    />
+    <link
+      rel="preload"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"
+      as="script"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-webgl@0.18.0/lib/addon-webgl.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-search@0.15.0/lib/addon-search.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-image@0.8.0/lib/addon-image.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" />
+          <circle
+            cx="12"
+            cy="12"
+            r="2.5"
+            fill="currentColor"
+            stroke="none"
+            opacity=".3"
+          />
+          <path
+            d="M4.93 4.93l2.12 2.12M19.07 4.93l-2.12 2.12M12 2v2M22 12h-2M2 12h2"
+            stroke-width="1.2"
+            opacity=".4"
+          />
+        </svg>
+        Cockpit
+      </div>
+      <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchView('dashboard')">
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          Overview
+        </button>
+        <button class="nav-tab" onclick="switchView('terminal')">
+          <svg viewBox="0 0 24 24">
+            <polyline points="4 17 10 11 4 5" />
+            <line x1="12" y1="19" x2="20" y2="19" />
+          </svg>
+          Terminal
+        </button>
+        <button class="nav-tab" onclick="switchView('diff')">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3v18" />
+            <path d="M5 12h14" />
+          </svg>
+          Changes
+        </button>
+        <button class="nav-tab" onclick="switchView('readme')">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path
+              d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+            />
+          </svg>
+          README
+        </button>
+      </div>
+      <div class="header-right">
+        <span class="header-clock" id="header-clock"></span>
+        <div class="stat-badge">
+          <span>Output</span><span class="value" id="today-output">0</span>
+        </div>
+        <div class="stat-badge">
+          <span>Msgs</span><span class="value" id="today-msgs">0</span>
+        </div>
+        <div
+          class="stat-badge"
+          id="dev-server-badge"
+          onclick="showDevServerDialog()"
+          style="cursor: pointer"
+          title="Running dev servers"
+        >
+          <span>Dev</span><span class="value" id="dev-count">0</span>
+        </div>
+        <button
+          class="btn"
+          id="notify-toggle"
+          onclick="toggleNotifications()"
+          style="font-size: 0.72rem; padding: 3px 8px"
+          title="Toggle notifications (right-click for per-project settings)"
+          oncontextmenu="
+            event.preventDefault();
+            openNotifSettings();
+          "
+        >
+          On
+        </button>
+        <button
+          class="header-btn"
+          onclick="openErrorLog()"
+          title="Error Log"
+          id="error-log-btn"
+          style="display: none"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+            />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
+        <button
+          class="theme-toggle"
+          id="theme-toggle"
+          onclick="toggleTheme()"
+          title="Toggle theme"
+        >
+          <svg
+            id="theme-icon-dark"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
+          </svg>
+          <svg
+            id="theme-icon-light"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            style="display: none"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+        </button>
+        <span class="conn-dot" id="conn-dot"></span>
+        <button
+          class="header-btn"
+          onclick="openSettingsPanel()"
+          title="Settings"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+            />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="app">
+      <!-- Dashboard View -->
+      <div class="view active" id="dashboard-view">
+        <section>
+          <div class="stats-row" id="stats-row">
+            <div
+              class="stat-card clickable"
+              data-accent="green"
+              onclick="showConvList()"
+              title="View recent conversations"
+            >
+              <span class="stat-label">Active Sessions</span
+              ><span class="stat-value" id="stat-active">0</span>
+            </div>
+            <div class="stat-card" data-accent="blue">
+              <span class="stat-label">Output Tokens</span
+              ><span class="stat-value" id="stat-today">0</span>
+            </div>
+            <div class="stat-card" data-accent="accent">
+              <span class="stat-label">Open PRs</span
+              ><span class="stat-value" id="stat-prs">0</span>
+            </div>
+            <div class="stat-card" data-accent="yellow">
+              <span class="stat-label">Uncommitted</span
+              ><span class="stat-value" id="stat-uncommitted">0</span>
+            </div>
+          </div>
+        </section>
+        <section class="quick-actions-section">
+          <div class="quick-actions" id="quick-actions">
+            <button class="qa-btn" onclick="showConvList()">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+                /></svg
+              >Recent Chats
+            </button>
+            <button
+              class="qa-btn"
+              onclick="
+                switchView('terminal');
+                openNewTermModal();
+              "
+            >
+              <svg viewBox="0 0 24 24">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" /></svg
+              >New Terminal
+            </button>
+            <button class="qa-btn" onclick="switchView('diff')">
+              <svg viewBox="0 0 24 24"><path d="M12 3v18M5 12h14" /></svg
+              >Changes
+            </button>
+            <button class="qa-btn" onclick="fetchAllProjects()">
+              <svg viewBox="0 0 24 24">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" /></svg
+              >Fetch All
+            </button>
+            <button class="qa-btn" onclick="toggleCommandPalette()">
+              <svg viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" /></svg
+              >Commands <span class="qa-shortcut">Ctrl+K</span>
+            </button>
+            <button class="qa-btn" onclick="showShortcutHelp()">
+              <svg viewBox="0 0 24 24">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path
+                  d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"
+                /></svg
+              >Shortcuts <span class="qa-shortcut">?</span>
+            </button>
+          </div>
+        </section>
+        <section>
+          <div class="section-title">Projects</div>
+          <div class="project-search-bar">
+            <input
+              type="text"
+              id="project-search"
+              placeholder="Search projects..."
+              oninput="filterProjects()"
+            />
+            <div class="project-filter-btns" id="project-filter-btns">
+              <button
+                class="pf-btn active"
+                data-filter="all"
+                onclick="setProjectFilter('all')"
+              >
+                All
+              </button>
+              <button
+                class="pf-btn"
+                data-filter="active"
+                onclick="setProjectFilter('active')"
+              >
+                Active
+              </button>
+              <button
+                class="pf-btn"
+                data-filter="idle"
+                onclick="setProjectFilter('idle')"
+              >
+                Idle
+              </button>
+            </div>
+            <span class="project-search-count" id="project-search-count"></span>
+          </div>
+          <div class="project-grid-wrap">
+            <div class="scroll-ind left hidden" id="scroll-ind-left"></div>
+            <div class="project-grid" id="project-grid"></div>
+            <div class="scroll-ind right hidden" id="scroll-ind-right"></div>
+          </div>
+        </section>
+        <section>
+          <div class="section-title">Cost & Usage</div>
+          <div class="usage-grid" id="usage-grid">
+            <!-- Today -->
+            <div class="usage-card" id="uc-today">
+              <div class="uc-header">
+                <span class="uc-title">Today</span
+                ><span class="uc-sub" id="uc-today-date"></span>
+              </div>
+              <div class="uc-main" id="uc-today-output">0 tok</div>
+              <div class="uc-stats" id="uc-today-stats"></div>
+              <div class="uc-models" id="uc-today-models"></div>
+              <div class="uc-footer" id="uc-today-cost"></div>
+            </div>
+            <!-- This Week -->
+            <div class="usage-card" id="uc-week">
+              <div class="uc-header">
+                <span class="uc-title">This Week</span
+                ><span class="uc-sub" id="uc-week-reset"></span>
+              </div>
+              <div class="uc-main" id="uc-week-output">0 tok</div>
+              <div class="uc-stats" id="uc-week-stats"></div>
+              <div class="uc-models" id="uc-week-models"></div>
+              <div class="uc-footer" id="uc-week-cost"></div>
+            </div>
+            <!-- Overview -->
+            <div class="usage-card" id="uc-overview">
+              <div class="uc-header">
+                <span class="uc-title">Overview</span>
+              </div>
+              <div class="uc-stats" id="uc-overview-stats"></div>
+              <div class="uc-footer" id="uc-plan-info"></div>
+            </div>
+          </div>
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>
+                Daily Output Tokens <span id="chart-period-label">(30d)</span>
+                <div class="chart-period">
+                  <button class="active" onclick="setChartPeriod(7)">7d</button
+                  ><button onclick="setChartPeriod(14)">14d</button
+                  ><button onclick="setChartPeriod(30)">30d</button>
+                </div>
+              </h3>
+              <div class="chart-wrap"><canvas id="daily-chart"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <h3>By Model</h3>
+              <div class="chart-wrap"><canvas id="model-chart"></canvas></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Terminal View -->
+      <div class="view" id="terminal-view">
+        <div class="term-panels" id="term-panels">
+          <div class="term-empty">
+            <button class="btn" onclick="openNewTermModal()">
+              + New Terminal
+            </button>
+          </div>
+        </div>
+        <div class="term-search" id="term-search-bar">
+          <input
+            type="text"
+            placeholder="Search..."
+            onkeydown="
+              if (event.key === 'Enter') {
+                doTermSearch(event.shiftKey ? 'prev' : 'next');
+                event.preventDefault();
+              }
+              if (event.key === 'Escape') {
+                closeTermSearch();
+              }
+            "
+            oninput="doTermSearch('next')"
+          />
+          <button
+            class="ts-btn"
+            onclick="doTermSearch('prev')"
+            title="Previous"
+          >
+            &uarr;
+          </button>
+          <button class="ts-btn" onclick="doTermSearch('next')" title="Next">
+            &darr;
+          </button>
+          <span class="ts-count" id="ts-match-count"></span>
+          <button
+            class="ts-btn"
+            onclick="closeTermSearch()"
+            title="Close (Esc)"
+          >
+            &times;
+          </button>
+          <span
+            style="
+              width: 1px;
+              height: 16px;
+              background: var(--border);
+              margin: 0 4px;
+            "
+          ></span>
+          <div class="term-font-controls">
+            <button
+              class="term-font-btn"
+              onclick="changeTermFontSize(-1)"
+              title="Decrease font"
+            >
+              −
+            </button>
+            <span class="term-font-size" id="term-font-size">13</span>
+            <button
+              class="term-font-btn"
+              onclick="changeTermFontSize(1)"
+              title="Increase font"
+            >
+              +
+            </button>
+            <span
+              style="
+                width: 1px;
+                height: 16px;
+                background: var(--border);
+                margin: 0 4px;
+              "
+            ></span>
+            <button
+              class="term-font-btn"
+              onclick="exportTerminal()"
+              title="Export terminal output (.txt)"
+              style="width: auto; padding: 0 6px; font-size: 0.7rem"
+            >
+              TXT
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Diff View -->
+      <div class="view" id="diff-view">
+        <div class="diff-toolbar">
+          <select id="diff-project" onchange="loadDiff()"></select>
+          <div class="diff-branch-info" id="diff-branch-info"></div>
+          <div class="diff-summary" id="diff-summary"></div>
+          <button
+            class="dt-icon-btn"
+            onclick="diffExpandAll()"
+            title="Expand All (E)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M7 10l5 5 5-5" />
+            </svg>
+          </button>
+          <button
+            class="dt-icon-btn"
+            onclick="diffCollapseAll()"
+            title="Collapse All (C)"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M7 14l5-5 5 5" />
+            </svg>
+          </button>
+          <button class="dt-icon-btn" onclick="loadDiff()" title="Refresh (R)">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M1 4v6h6" />
+              <path d="M3.51 15a9 9 0 105.64-8.36L1 10" />
+            </svg>
+          </button>
+          <button
+            class="ac-btn"
+            id="ac-btn"
+            onclick="startAutoCommit()"
+            title="AI Auto-Commit"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M12 3v18M5.5 8.5l13 7M18.5 8.5l-13 7" />
+            </svg>
+            AI Commit
+          </button>
+          <div class="dt-act-group">
+            <button
+              class="dt-act-btn"
+              id="dt-pull-btn"
+              onclick="doPull()"
+              title="Git Pull"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path d="M12 5v14M19 12l-7 7-7-7" />
+              </svg>
+              Pull
+            </button>
+            <button
+              class="dt-act-btn"
+              id="dt-fetch-btn"
+              onclick="doFetch()"
+              title="Git Fetch --all"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Fetch
+            </button>
+            <button
+              class="dt-act-btn"
+              id="dt-stash-btn"
+              onclick="doStash()"
+              title="Git Stash"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"
+                />
+                <polyline points="17 21 17 13 7 13 7 21" />
+              </svg>
+              Stash
+            </button>
+            <button
+              class="dt-act-btn"
+              id="dt-stash-pop-btn"
+              onclick="doStashPop()"
+              title="Git Stash Pop"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Pop
+            </button>
+          </div>
+        </div>
+        <div
+          class="diff-layout"
+          style="position: relative; flex: 1; overflow: hidden"
+        >
+          <aside class="diff-sidebar" id="diff-sidebar">
+            <div class="diff-commit-box">
+              <textarea
+                id="diff-commit-msg"
+                placeholder="Commit message (Ctrl+Enter to commit)"
+                rows="2"
+                onkeydown="
+                  if (event.ctrlKey && event.key === 'Enter') {
+                    event.preventDefault();
+                    doManualCommit();
+                  }
+                "
+              ></textarea>
+              <div class="dcb-row">
+                <button
+                  class="dcb-ai-btn"
+                  id="dcb-ai-btn"
+                  onclick="generateCommitMsg()"
+                  title="AI: Generate commit message"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M12 3v18M5.5 8.5l13 7M18.5 8.5l-13 7" />
+                  </svg>
+                </button>
+                <button
+                  class="dcb-commit-btn"
+                  id="dcb-commit-btn"
+                  onclick="doManualCommit()"
+                  disabled
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Commit
+                </button>
+                <span class="dcb-staged-count" id="dcb-staged-info"></span>
+              </div>
+            </div>
+            <div class="diff-sidebar-search">
+              <input
+                type="text"
+                id="diff-file-search"
+                placeholder="Filter files..."
+                oninput="filterDiffFiles()"
+              />
+            </div>
+            <div class="diff-sidebar-list" id="diff-sidebar-list"></div>
+          </aside>
+          <main class="diff-main" id="diff-main">
+            <div class="diff-empty" id="diff-empty">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M9 12l2 2 4-4" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              <span class="de-title">No changes</span>
+              <span class="de-sub">Working tree is clean</span>
+            </div>
+          </main>
+        </div>
+      </div>
+
+      <!-- README View -->
+      <div class="view" id="readme-view">
+        <div class="readme-content" id="readme-content"></div>
+      </div>
+    </div>
+
+    <!-- New Terminal Modal -->
+    <dialog id="new-term-modal">
+      <div class="modal-header">
+        <h2>New Terminal</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('new-term-modal').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="modal-body">
+        <label>Project</label>
+        <select id="nt-project" onchange="loadBranchesForTerm()"></select>
+        <label>Command</label>
+        <select id="nt-cmd">
+          <option value="">Shell only</option>
+          <option value="claude">claude</option>
+          <option value="claude --continue">claude --continue</option>
+          <option value="claude --model opus">claude --model opus</option>
+          <option value="claude --model sonnet">claude --model sonnet</option>
+        </select>
+        <div id="nt-branch-section" style="display: none">
+          <label
+            >Branch / Worktree
+            <span style="color: var(--text-3); font-size: 0.72rem"
+              >(optional)</span
+            ></label
+          >
+          <div class="nt-branch-list" id="nt-branch-list"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          class="btn"
+          onclick="document.getElementById('new-term-modal').close()"
+        >
+          Cancel
+        </button>
+        <button class="btn primary" onclick="createTerminal()">Open</button>
+      </div>
+    </dialog>
+
+    <!-- Start Session Modal -->
+    <dialog id="start-modal">
+      <div class="modal-header">
+        <h2>Start Session</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('start-modal').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal-project-id" />
+        <label>Model</label>
+        <select id="modal-model">
+          <option value="">Default</option>
+          <option value="opus">Opus</option>
+          <option value="sonnet">Sonnet</option>
+          <option value="haiku">Haiku</option>
+        </select>
+        <label>Prompt</label>
+        <input
+          type="text"
+          id="modal-prompt"
+          placeholder="/orchestrate, /fix, or task"
+        />
+      </div>
+      <div class="modal-footer">
+        <button
+          class="btn"
+          onclick="document.getElementById('start-modal').close()"
+        >
+          Cancel
+        </button>
+        <button class="btn primary" onclick="doStartSession()">Start</button>
+      </div>
+    </dialog>
+
+    <!-- Add/Edit Project Modal -->
+    <dialog id="project-modal">
+      <div class="modal-header">
+        <h2 id="pm-title">Add Project</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('project-modal').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pm-edit-id" />
+        <label>Project Name</label>
+        <input type="text" id="pm-name" placeholder="My Project" />
+        <label>Path</label>
+        <div class="path-input-row">
+          <input
+            type="text"
+            id="pm-path"
+            placeholder="C:/_project/service/my-project"
+          />
+          <button
+            type="button"
+            class="btn-browse"
+            onclick="toggleFolderPicker()"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
+              /></svg
+            >Browse
+          </button>
+        </div>
+        <div class="folder-picker" id="folder-picker">
+          <div class="fp-breadcrumb" id="fp-breadcrumb"></div>
+          <ul class="fp-list" id="fp-list"></ul>
+          <div class="fp-select">
+            <button class="btn primary" onclick="selectCurrentFolder()">
+              Select this folder
+            </button>
+          </div>
+        </div>
+        <label>Stack</label>
+        <select id="pm-stack">
+          <option value="react-next">React / Next.js</option>
+          <option value="nestjs">NestJS</option>
+          <option value="express">Express</option>
+          <option value="python">Python</option>
+          <option value="other">Other</option>
+        </select>
+        <label>Dev Server Command</label>
+        <div style="display: flex; gap: 6px; align-items: center">
+          <input
+            type="text"
+            id="pm-devcmd"
+            placeholder="npm run dev, pnpm dev, etc."
+            style="flex: 1"
+          />
+          <button
+            type="button"
+            class="btn"
+            id="pm-scripts-btn"
+            onclick="loadPkgScripts()"
+            style="font-size: 0.72rem; white-space: nowrap"
+            title="Load from package.json"
+          >
+            Scripts
+          </button>
+        </div>
+        <div
+          id="pm-scripts-list"
+          style="
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-0);
+            margin-top: 4px;
+          "
+        ></div>
+        <label
+          >GitHub URL
+          <span style="color: var(--text-3); font-size: 0.72rem"
+            >(auto-detected if empty)</span
+          ></label
+        >
+        <input
+          type="text"
+          id="pm-github"
+          placeholder="https://github.com/org/repo"
+        />
+        <label>Color</label>
+        <input type="color" id="pm-color" value="#6366f1" />
+      </div>
+      <div class="modal-footer">
+        <button
+          class="btn"
+          onclick="document.getElementById('project-modal').close()"
+        >
+          Cancel
+        </button>
+        <button class="btn primary" onclick="saveProject()">Save</button>
+      </div>
+    </dialog>
+
+    <!-- Terminal Context Menu -->
+    <div class="ctx-menu" id="term-ctx-menu"></div>
+
+    <!-- Diff Dialog -->
+    <dialog id="diff-dialog" style="max-width: 900px; width: 95%">
+      <div class="modal-header">
+        <h2 id="diff-dialog-title">Changes</h2>
+        <div
+          class="diff-summary"
+          id="diff-dialog-summary"
+          style="margin-left: auto; margin-right: 12px"
+        ></div>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('diff-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div
+        class="modal-body"
+        style="max-height: 70vh; overflow-y: auto; padding: 0"
+      >
+        <div class="diff-file-nav" id="diff-file-nav"></div>
+        <div
+          id="diff-dialog-panels"
+          style="
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          "
+        ></div>
+      </div>
+    </dialog>
+
+    <!-- Session History Dialog -->
+    <dialog id="session-dialog" style="max-width: 600px; width: 95%">
+      <div class="modal-header">
+        <h2 id="session-dialog-title">Session History</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('session-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div
+        class="modal-body"
+        style="max-height: 60vh; overflow-y: auto; padding: 0"
+      >
+        <div id="session-dialog-content" style="padding: 14px"></div>
+      </div>
+    </dialog>
+
+    <!-- Dev Server Dialog -->
+    <dialog id="dev-dialog" style="max-width: 560px; width: 95%">
+      <div class="modal-header">
+        <h2>Dev Servers</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('dev-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div
+        class="modal-body"
+        style="max-height: 60vh; overflow-y: auto; padding: 0"
+      >
+        <div id="dev-dialog-content"></div>
+      </div>
+    </dialog>
+
+    <!-- Git Log Dialog -->
+    <dialog id="git-log-dialog" style="max-width: 700px; width: 95%">
+      <div class="modal-header">
+        <h2 id="git-log-title">Git History</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('git-log-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div
+        class="modal-body"
+        style="max-height: 60vh; overflow-y: auto; padding: 0"
+      >
+        <div id="git-log-content" style="padding: 0"></div>
+      </div>
+    </dialog>
+
+    <!-- Error Log Dialog -->
+    <dialog id="error-log-dialog" style="max-width: 700px; width: 95%">
+      <div class="modal-header">
+        <h2>Error Log</h2>
+        <div style="margin-left: auto; margin-right: 12px">
+          <button
+            class="btn"
+            onclick="clearErrorLog()"
+            style="font-size: 0.72rem"
+          >
+            Clear
+          </button>
+        </div>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('error-log-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div
+        class="modal-body"
+        style="max-height: 60vh; overflow-y: auto; padding: 0"
+      >
+        <div id="error-log-content"></div>
+      </div>
+    </dialog>
+
+    <!-- Discover Projects Dialog -->
+    <dialog id="discover-dialog" style="max-width: 580px; width: 95%">
+      <div class="modal-header">
+        <h2>Discover Projects</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('discover-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div class="modal-body" id="discover-body">
+        <div class="discover-loading">
+          Scanning Claude projects<span></span>
+        </div>
+      </div>
+      <div class="modal-footer" id="discover-footer" style="display: none">
+        <button
+          class="btn"
+          onclick="document.getElementById('discover-dialog').close()"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn primary"
+          id="discover-add-btn"
+          onclick="addDiscoveredProjects()"
+        >
+          Add Selected (0)
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Notification Settings Dialog -->
+    <dialog id="notif-settings-dialog" style="max-width: 460px; width: 95%">
+      <div class="modal-header">
+        <h2>Notification Settings</h2>
+        <button
+          class="modal-close"
+          onclick="document.getElementById('notif-settings-dialog').close()"
+        >
+          &times;
+        </button>
+      </div>
+      <div
+        class="modal-body"
+        style="max-height: 60vh; overflow-y: auto; padding: 14px"
+      >
+        <div
+          style="margin-bottom: 12px; font-size: 0.82rem; color: var(--text-2)"
+        >
+          Toggle notifications per project:
+        </div>
+        <div id="notif-filter-list"></div>
+      </div>
+    </dialog>
+
+    <!-- Settings Panel -->
+    <div
+      class="settings-overlay"
+      id="settings-overlay"
+      onclick="closeSettingsPanel()"
+    ></div>
+    <div class="settings-panel" id="settings-panel">
+      <div class="settings-header">
+        <h2>Projects</h2>
+        <button class="modal-close" onclick="closeSettingsPanel()">
+          &times;
+        </button>
+      </div>
+      <div class="settings-body">
+        <div class="settings-actions">
+          <button
+            class="btn"
+            onclick="exportSettings()"
+            title="Download projects.json"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export
+          </button>
+          <button
+            class="btn"
+            onclick="document.getElementById('import-file').click()"
+            title="Import projects.json"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Import
+          </button>
+          <input
+            type="file"
+            id="import-file"
+            accept=".json"
+            style="display: none"
+            onchange="importSettings(this)"
+          />
+          <button
+            class="btn"
+            onclick="openDiscoverModal()"
+            title="Auto-discover Claude projects"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            Discover
+          </button>
+        </div>
+        <div class="settings-project-list" id="settings-project-list"></div>
+      </div>
+      <div class="settings-footer">
+        <button
+          class="btn primary"
+          onclick="openAddProjectModal()"
+          style="width: 100%"
+        >
+          + Add Project
+        </button>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Recent Conversations -->
+    <div
+      class="conv-overlay hidden"
+      id="conv-overlay"
+      onclick="if (event.target === this) closeConvList();"
+    >
+      <div class="conv-box">
+        <div class="conv-header">
+          <h3>
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"
+              />
+            </svg>
+            Recent Conversations
+          </h3>
+          <button
+            class="header-btn"
+            onclick="closeConvList()"
+            style="width: 24px; height: 24px"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="conv-body" id="conv-body"></div>
+      </div>
+    </div>
+
+    <!-- Command Palette -->
+    <div
+      class="cmd-palette-overlay hidden"
+      id="cmd-palette"
+      onclick="if (event.target === this) closeCommandPalette();"
+    >
+      <div class="cmd-palette-box">
+        <input
+          class="cmd-palette-input"
+          id="cmd-palette-input"
+          type="text"
+          placeholder="Type a command..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="cmd-palette-list" id="cmd-palette-list"></div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcut Overlay -->
+    <div
+      class="shortcut-overlay hidden"
+      id="shortcut-overlay"
+      onclick="if (event.target === this) hideShortcutHelp();"
+    >
+      <div class="shortcut-card">
+        <h2>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path
+              d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"
+            />
+          </svg>
+          Keyboard Shortcuts
+        </h2>
+        <table>
+          <tr class="sc-section">
+            <td colspan="2">Navigation</td>
+          </tr>
+          <tr>
+            <td>Ctrl + 1</td>
+            <td>Overview</td>
+          </tr>
+          <tr>
+            <td>Ctrl + 2</td>
+            <td>Terminal</td>
+          </tr>
+          <tr>
+            <td>Ctrl + 3</td>
+            <td>Changes</td>
+          </tr>
+          <tr>
+            <td>Ctrl + 4</td>
+            <td>README</td>
+          </tr>
+          <tr class="sc-section">
+            <td colspan="2">Terminal</td>
+          </tr>
+          <tr>
+            <td>Ctrl + T</td>
+            <td>New terminal</td>
+          </tr>
+          <tr>
+            <td>Ctrl + W</td>
+            <td>Close terminal</td>
+          </tr>
+          <tr>
+            <td>Ctrl + F</td>
+            <td>Search in terminal</td>
+          </tr>
+          <tr>
+            <td>Ctrl + Tab</td>
+            <td>Next terminal</td>
+          </tr>
+          <tr>
+            <td>Ctrl + Shift + Tab</td>
+            <td>Previous terminal</td>
+          </tr>
+          <tr>
+            <td>Double-click tab</td>
+            <td>Rename terminal</td>
+          </tr>
+          <tr class="sc-section">
+            <td colspan="2">Changes</td>
+          </tr>
+          <tr>
+            <td>E</td>
+            <td>Expand all diffs</td>
+          </tr>
+          <tr>
+            <td>C</td>
+            <td>Collapse all diffs</td>
+          </tr>
+          <tr class="sc-section">
+            <td colspan="2">General</td>
+          </tr>
+          <tr>
+            <td>Ctrl + K</td>
+            <td>Command palette</td>
+          </tr>
+          <tr>
+            <td>?</td>
+            <td>Show this help</td>
+          </tr>
+          <tr>
+            <td>Escape</td>
+            <td>Close overlay / search</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

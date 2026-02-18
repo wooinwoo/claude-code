@@ -1,0 +1,334 @@
+{
+  "projects": [
+    {
+      "id": "cds-server",
+      "name": "CDS Server",
+      "path": "C:/_project/service/cds-server",
+      "stack": "nestjs",
+      "color": "#10B981",
+      "session": {
+        "projectId": "cds-server",
+        "state": "idle",
+        "sessionId": "91384207-fa38-488d-962e-08aa6326751a",
+        "lastActivity": "2026-02-11T07:42:23.915Z",
+        "model": null,
+        "sessionCount": 1
+      },
+      "git": {
+        "projectId": "cds-server",
+        "branch": "dev",
+        "uncommittedCount": 0,
+        "uncommittedFiles": [],
+        "recentCommits": [
+          {
+            "hash": "1ecf992",
+            "message": "feat: system notifications & MCP CRLF fix",
+            "ago": "30 hours ago"
+          },
+          {
+            "hash": "95d4934",
+            "message": "fix: AccountEntity circular dependency 해결",
+            "ago": "31 hours ago"
+          },
+          {
+            "hash": "79e5a4e",
+            "message": "Merge pull request #1 from coupin-io/fix/company-data-isolation",
+            "ago": "32 hours ago"
+          },
+          {
+            "hash": "5204c38",
+            "message": "fix: companyId 데이터 격리 강화 및 계정 역할 통합",
+            "ago": "2 days ago"
+          },
+          {
+            "hash": "a962bb0",
+            "message": "chore: update wiw_claude-code template",
+            "ago": "2 days ago"
+          }
+        ],
+        "worktrees": [
+          {
+            "path": "C:/_project/service/cds-server",
+            "branch": "dev"
+          }
+        ],
+        "remoteUrl": "https://github.com/coupin-io/cds-server"
+      },
+      "prs": {
+        "projectId": "cds-server",
+        "prs": [
+          {
+            "number": 2,
+            "title": "test(insight): add E2E tests for coupon and delivery endpoints",
+            "branch": "insight-e2e-tests",
+            "author": "ryu-seon-ho",
+            "updatedAt": "2026-02-12T00:23:55Z",
+            "reviewDecision": "PENDING",
+            "isDraft": false
+          }
+        ]
+      },
+      "devCmd": "npm run console"
+    },
+    {
+      "id": "cims-site",
+      "name": "CIMS Site",
+      "path": "C:/_project/service/cims-site",
+      "stack": "react-next",
+      "color": "#8B5CF6",
+      "session": {
+        "projectId": "cims-site",
+        "state": "no_data",
+        "sessionId": null,
+        "lastActivity": null,
+        "model": null
+      },
+      "git": {
+        "projectId": "cims-site",
+        "branch": "dev",
+        "uncommittedCount": 0,
+        "uncommittedFiles": [],
+        "recentCommits": [
+          {
+            "hash": "7a25e0b7",
+            "message": "feat: system notifications & MCP CRLF fix",
+            "ago": "27 hours ago"
+          },
+          {
+            "hash": "8c313ac4",
+            "message": "feat(common): 구독 시스템 및 결제 기능 추가",
+            "ago": "28 hours ago"
+          },
+          {
+            "hash": "6f5b75aa",
+            "message": "feat(common): 회원 계정 관리 및 탈퇴 기능 개선",
+            "ago": "28 hours ago"
+          },
+          {
+            "hash": "033d57d1",
+            "message": "chore: update wiw_claude-code template",
+            "ago": "2 days ago"
+          },
+          {
+            "hash": "e7c4ab11",
+            "message": "fix(gitignore): correct worktrees path to .worktrees",
+            "ago": "2 days ago"
+          }
+        ],
+        "worktrees": [
+          {
+            "path": "C:/_project/service/cims-site",
+            "branch": "dev"
+          }
+        ],
+        "remoteUrl": "https://github.com/coupin-io/cims-site"
+      },
+      "prs": {
+        "projectId": "cims-site",
+        "prs": []
+      },
+      "devCmd": "npm run build"
+    },
+    {
+      "id": "cims-server",
+      "name": "CIMS Server",
+      "path": "C:/_project/service/cims-server",
+      "stack": "nestjs",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "halo-server",
+      "name": "Halo Server",
+      "path": "C:/_project/service/halo-server",
+      "stack": "nestjs",
+      "color": "#EF4444"
+    },
+    {
+      "id": "bid-ai-site",
+      "name": "Bid AI Site",
+      "path": "C:/_project/service/bid-ai-site",
+      "stack": "react-next",
+      "color": "#ec4899",
+      "devCmd": "npm run dev"
+    },
+    {
+      "name": "template",
+      "path": "C:/_project/template",
+      "id": "template",
+      "color": "#14B8A6"
+    },
+    {
+      "name": "landing",
+      "path": "C:/_project/service/landing",
+      "id": "landing",
+      "color": "#10B981"
+    },
+    {
+      "name": "trip-admin",
+      "path": "C:/_project/service/trip-admin",
+      "id": "trip-admin",
+      "color": "#EC4899"
+    },
+    {
+      "name": "rsin-site",
+      "path": "C:/_project/service/rsin-site",
+      "id": "rsin-site",
+      "color": "#8B5CF6"
+    },
+    {
+      "name": "bidraon-landing",
+      "path": "c:/_project/service/bidraon/bidraon-landing",
+      "id": "bidraon-landing",
+      "color": "#6366F1"
+    },
+    {
+      "name": "blog-automation-server",
+      "path": "c:/_project/service/blog-automation-server",
+      "id": "blog-automation-server",
+      "color": "#8B5CF6"
+    },
+    {
+      "name": "cdms-site",
+      "path": "c:/_project/service/cdms-site",
+      "id": "cdms-site",
+      "color": "#10B981"
+    },
+    {
+      "name": "coupin",
+      "path": "c:/_project/service/coupin",
+      "id": "coupin",
+      "color": "#EF4444"
+    },
+    {
+      "name": "dashboard",
+      "path": "C:/_project/template/wiw_claude-code/dashboard",
+      "id": "dashboard",
+      "color": "#F97316"
+    },
+    {
+      "name": "insight-server",
+      "path": "c:/_project/service/insight-server",
+      "id": "insight-server",
+      "color": "#3B82F6",
+      "session": {
+        "projectId": "insight-server",
+        "state": "idle",
+        "sessionId": "30f62098-408d-4b03-bf03-20e5703636e1",
+        "lastActivity": "2026-01-19T01:17:19.520Z",
+        "model": "opus-4-5",
+        "sessionCount": 3
+      },
+      "git": {
+        "projectId": "insight-server",
+        "branch": "prod",
+        "uncommittedCount": 0,
+        "uncommittedFiles": [],
+        "recentCommits": [
+          {
+            "hash": "20e6df5",
+            "message": "chore: Force Lambda rebuild and redeploy",
+            "ago": "3 weeks ago"
+          },
+          {
+            "hash": "30484fd",
+            "message": "docs: Add comprehensive prod deployment guide with SSM parameter mapping",
+            "ago": "4 weeks ago"
+          },
+          {
+            "hash": "74d8cef",
+            "message": "chore: Force Lambda rebuild and redeploy",
+            "ago": "4 weeks ago"
+          },
+          {
+            "hash": "7a0bcf6",
+            "message": "fix: Exclude schema columns not present in prod halo DB",
+            "ago": "4 weeks ago"
+          },
+          {
+            "hash": "54dc643",
+            "message": "fix: Align Insight coupon queries with Halo Server structure",
+            "ago": "4 weeks ago"
+          }
+        ],
+        "worktrees": [
+          {
+            "path": "C:/_project/service/insight-server",
+            "branch": "prod"
+          }
+        ],
+        "remoteUrl": "https://github.com/coupin-io/insight-server"
+      },
+      "prs": {
+        "projectId": "insight-server",
+        "prs": []
+      },
+      "devCmd": "npm run start"
+    },
+    {
+      "name": "insuniverse-site",
+      "path": "c:/_project/service/insuniverse-site",
+      "id": "insuniverse-site",
+      "color": "#84CC16"
+    },
+    {
+      "name": "n8n",
+      "path": "C:/_project/side/n8n",
+      "id": "n8n",
+      "color": "#3B82F6"
+    },
+    {
+      "name": "orbis-admin",
+      "path": "c:/_project/side/orbis-admin",
+      "id": "orbis-admin",
+      "color": "#F59E0B"
+    },
+    {
+      "name": "orbis-site",
+      "path": "c:/_project/side/orbis-site",
+      "id": "orbis-site",
+      "color": "#EC4899"
+    },
+    {
+      "name": "rastra-site",
+      "path": "c:/_project/service/rastra-site",
+      "id": "rastra-site",
+      "color": "#84CC16"
+    },
+    {
+      "name": "Reward-Server",
+      "path": "c:/_project/service/fm/Reward-Server",
+      "id": "reward-server",
+      "color": "#EC4899"
+    },
+    {
+      "name": "send-admin",
+      "path": "c:/_project/service/send-admin",
+      "id": "send-admin",
+      "color": "#14B8A6"
+    },
+    {
+      "name": "send-server",
+      "path": "c:/_project/service/send-server",
+      "id": "send-server",
+      "color": "#EF4444"
+    },
+    {
+      "name": "service",
+      "path": "c:/_project/service",
+      "id": "service",
+      "color": "#6366F1"
+    },
+    {
+      "name": "success-plan",
+      "path": "c:/_project/service/success-plan",
+      "id": "success-plan",
+      "color": "#EC4899"
+    },
+    {
+      "name": "새 폴더",
+      "path": "c:/Users/RST/Downloads/새 폴더",
+      "id": "",
+      "color": "#F97316"
+    }
+  ]
+}

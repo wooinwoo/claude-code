@@ -1,0 +1,14 @@
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\deps\thiserror-554a642ff17728da.d: C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\thiserror-83ae92bdf4b6a578\out/private.rs
+
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\deps\libthiserror-554a642ff17728da.rlib: C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\thiserror-83ae92bdf4b6a578\out/private.rs
+
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\deps\libthiserror-554a642ff17728da.rmeta: C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\thiserror-83ae92bdf4b6a578\out/private.rs
+
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\lib.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\aserror.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\display.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\var.rs:
+C:\Users\RST\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.18\src\private.rs:
+C:\_project\template\wiw_claude-code\dashboard\src-tauri\target\release\build\thiserror-83ae92bdf4b6a578\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\_project\\template\\wiw_claude-code\\dashboard\\src-tauri\\target\\release\\build\\thiserror-83ae92bdf4b6a578\\out

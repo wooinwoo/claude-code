@@ -290,6 +290,19 @@ git add . && git commit -m "feat(nestjs): add migration rule" && git push
 base/ 폴더는 sync.ps1이 덮어쓰므로 직접 수정하면 안 됩니다.
 ECC 규칙을 수정하고 싶으면 common/ 또는 스택 폴더에 같은 이름의 파일을 만들어 override하세요.
 
+## Dashboard
+
+여러 프로젝트의 Claude Code 세션, Git, PR, 사용량을 한 화면에서 모니터링하는 로컬 대시보드.
+
+```powershell
+cd dashboard && npm install && npm start
+# http://localhost:3847
+```
+
+주요 기능: 프로젝트 상태 모니터링, WebSocket 터미널, Git diff 뷰어, AI Auto Commit (Haiku), Dev Server 관리, IDE 연동
+
+상세 문서: [dashboard/README.md](dashboard/README.md)
+
 ## 출처
 
 | 폴더 | 출처 | 설명 |
