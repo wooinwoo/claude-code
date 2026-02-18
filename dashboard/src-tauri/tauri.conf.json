@@ -6,12 +6,14 @@
     "frontendDist": "http://localhost:3847"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Cockpit",
         "width": 1400,
         "height": 900,
-        "center": true
+        "center": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -21,6 +23,12 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "installer-hooks.nsh"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -29,6 +37,10 @@
     "resources": {
       "../server.js": "./",
       "../index.html": "./",
+      "../style.css": "./",
+      "../manifest.json": "./",
+      "../sw.js": "./",
+      "../js/*": "./js/",
       "../lib/*": "./lib/",
       "../package.json": "./",
       "../node_modules/*": "./node_modules/",
