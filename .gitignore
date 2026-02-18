@@ -22,6 +22,24 @@ CLAUDE.local.md
 .env
 .env.local
 
-# Node modules (scripts/)
+# Node modules
 node_modules/
 base/scripts/node_modules/
+
+# Dashboard - Tauri build artifacts
+dashboard/src-tauri/target/
+
+# Dashboard - runtime state (user-specific)
+dashboard/cost-cache.json
+dashboard/projects.json
+dashboard/session-state.json
+
+# Dashboard - binary
+dashboard/cockpit.exe
+
+# Dashboard - legacy monolith (replaced by ES modules)
+dashboard/app.js
+
+# OS
+Thumbs.db
+.DS_Store
