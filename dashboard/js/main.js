@@ -23,6 +23,8 @@ import {
   changeTermFontSize, showDisconnectIndicator, setupTermEventDelegation,
   startRenameHeader, saveLayout, restoreSavedLayout,
   loadBranchesForTerm, selectBranch, initFileDrop,
+  isMobile, mobileSwitchTerm, mobileCloseTerm,
+  setupMobileActions, setupMobileSwipe,
 } from './terminal.js';
 
 // ─── Diff module ───
@@ -298,6 +300,8 @@ window.loadBranchesForTerm = loadBranchesForTerm;
 window.selectBranch = selectBranch;
 window.fitAllTerminals = fitAllTerminals;
 window.debouncedFit = debouncedFit;
+window.mobileSwitchTerm = mobileSwitchTerm;
+window.mobileCloseTerm = mobileCloseTerm;
 
 // Diff
 window.renderDiffTableFull = renderDiffTableFull;
@@ -381,6 +385,67 @@ window.closeFilePreview = closeFilePreview;
 window.copyFilePathToClipboard = copyFilePathToClipboard;
 window.copyFileContent = copyFileContent;
 window.insertPathToTerminal = insertPathToTerminal;
+
+// Mobile Connect
+window.showMobileConnect = showMobileConnect;
+window.copyMobileUrl = copyMobileUrl;
+
+async function showMobileConnect() {
+  const dlg = document.getElementById('mobile-connect-dialog');
+  if (!dlg) return;
+  try {
+    const r = await fetch('/api/lan-info');
+    const info = await r.json();
+    if (!info.ips?.length) {
+      document.getElementById('mobile-connect-url').textContent = 'No network interface found';
+      dlg.showModal();
+      return;
+    }
+    // Prefer Tailscale (works anywhere), fallback to LAN
+    const primary = info.ips[0]; // already sorted: tailscale first
+    const url = `http://${primary.ip}:${info.port}?token=${info.token}`;
+    const label = primary.type === 'tailscale' ? 'Tailscale (anywhere)' : 'LAN (same WiFi)';
+
+    const urlEl = document.getElementById('mobile-connect-url');
+    urlEl.textContent = url;
+
+    // Show all available networks
+    const body = dlg.querySelector('.mobile-connect-body');
+    let infoHtml = `<div class="mobile-connect-nets">`;
+    for (const { ip, type } of info.ips) {
+      const badge = type === 'tailscale' ? 'Tailscale' : 'LAN';
+      infoHtml += `<span class="net-badge net-${type}">${badge}: ${ip}</span>`;
+    }
+    infoHtml += `</div>`;
+    const existing = body.querySelector('.mobile-connect-nets');
+    if (existing) existing.remove();
+    body.querySelector('.mobile-connect-desc').insertAdjacentHTML('afterend', infoHtml);
+
+    dlg.querySelector('.mobile-connect-desc').textContent =
+      `Scan QR or copy URL — ${label}`;
+
+    // Fetch QR SVG and inject directly
+    const qrContainer = document.getElementById('qr-container');
+    try {
+      const qrRes = await fetch(`/api/qr-code?data=${encodeURIComponent(url)}`);
+      const svgText = await qrRes.text();
+      qrContainer.innerHTML = svgText;
+      // Force SVG to fit container
+      const svgEl = qrContainer.querySelector('svg');
+      if (svgEl) { svgEl.style.width = '100%'; svgEl.style.height = '100%'; }
+    } catch { qrContainer.textContent = 'QR generation failed'; }
+    dlg.showModal();
+  } catch (e) {
+    showToast('Failed to get LAN info');
+  }
+}
+
+function copyMobileUrl() {
+  const el = document.getElementById('mobile-connect-url');
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => showToast('Copied!'));
+}
+
 
 // ─── Keyboard Shortcuts ───
 document.addEventListener('keydown', e => {
@@ -547,6 +612,9 @@ async function init() {
   setupCommandPaletteListeners();
   // Terminal event delegation
   setupTermEventDelegation();
+  // Mobile terminal: quick action bar + swipe gestures
+  setupMobileActions();
+  setupMobileSwipe();
   // Usage polling
   app.usageTimer = setInterval(fetchUsage, 60000);
 }

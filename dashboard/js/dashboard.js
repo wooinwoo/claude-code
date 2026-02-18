@@ -8,24 +8,70 @@ if ('Notification' in window && Notification.permission === 'default') {
 }
 
 export function notifySessionChange(projectId, oldState, newState) {
-  if (!app.notifyEnabled || Notification.permission !== 'granted') return;
+  if (!app.notifyEnabled) return;
   if (!isNotifEnabledForProject(projectId)) return;
   const project = app.projectList.find(p => p.id === projectId);
   const name = project?.name || projectId;
   const wasActive = oldState === 'busy' || oldState === 'waiting';
+  let title = '', body = '';
   if (wasActive && newState === 'idle') {
-    new Notification(`${name} — Session Complete`, {
-      body: 'Claude session finished.',
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2334d399"><circle cx="12" cy="12" r="10"/></svg>',
-      tag: `session-${projectId}`, silent: false,
-    });
+    title = `${name} — Session Complete`;
+    body = 'Claude session finished.';
   } else if (wasActive && (newState === 'no_data' || newState === 'no_sessions')) {
-    new Notification(`${name} — Session Ended`, {
-      body: 'Claude session disconnected.',
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23f87171"><circle cx="12" cy="12" r="10"/></svg>',
-      tag: `session-${projectId}`, silent: false,
-    });
+    title = `${name} — Session Ended`;
+    body = 'Claude session disconnected.';
   }
+  if (!title) return;
+  // 1) Browser Notification API (if permission granted)
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, { body, tag: `session-${projectId}`, silent: false });
+    } catch {}
+  }
+  // 2) Audio beep — always plays as backup
+  playNotifSound();
+  // 3) Title flash — visible when tab is in background
+  flashTitle(title);
+}
+
+// ─── Audio notification ───
+function playNotifSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Two-tone chime: 880Hz then 1100Hz
+    [0, 0.15].forEach((offset, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = i === 0 ? 880 : 1100;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + offset + 0.25);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + offset);
+      osc.stop(ctx.currentTime + offset + 0.3);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch {}
+}
+
+// ─── Title flash ───
+let _flashTimer = null;
+function flashTitle(msg) {
+  if (_flashTimer) clearInterval(_flashTimer);
+  const orig = document.title;
+  let on = true;
+  _flashTimer = setInterval(() => {
+    document.title = on ? `🔔 ${msg}` : orig;
+    on = !on;
+  }, 800);
+  // Stop after 10 seconds or on focus
+  const stop = () => {
+    if (_flashTimer) { clearInterval(_flashTimer); _flashTimer = null; }
+    document.title = orig;
+    window.removeEventListener('focus', stop);
+  };
+  window.addEventListener('focus', stop);
+  setTimeout(stop, 10000);
 }
 
 // ─── Clock ───

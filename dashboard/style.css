@@ -4766,6 +4766,57 @@ dialog::backdrop {
 .light-theme .hl-tag { color: #22863a; }
 .light-theme .hl-attr { color: #6f42c1; }
 
+/* ─── Mobile Connect Dialog ─── */
+.mobile-connect-dialog {
+  background: var(--bg-2);
+  color: var(--text-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  min-width: 320px;
+  max-width: 400px;
+}
+.mobile-connect-dialog::backdrop { background: rgba(0,0,0,.55); }
+.mobile-connect-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .7rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.mobile-connect-head h3 { font-size: .95rem; font-weight: 600; }
+.mobile-connect-body {
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .8rem;
+}
+.mobile-connect-desc { color: var(--text-2); font-size: .8rem; text-align: center; }
+#qr-canvas { border-radius: 8px; }
+.mobile-connect-url {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .5rem .8rem;
+  font-family: monospace;
+  font-size: .75rem;
+  word-break: break-all;
+  width: 100%;
+  text-align: center;
+  user-select: all;
+}
+.mobile-connect-copy { width: 100%; }
+.mobile-connect-hint { color: var(--text-2); font-size: .7rem; text-align: center; }
+.mobile-connect-nets { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: center; }
+.net-badge {
+  font-size: .7rem; padding: 2px 8px; border-radius: 10px; font-family: monospace;
+}
+.net-tailscale { background: #4f46e520; color: #818cf8; border: 1px solid #818cf840; }
+.net-lan { background: #22c55e20; color: #4ade80; border: 1px solid #4ade8040; }
+.light-theme .net-tailscale { color: #4f46e5; }
+.light-theme .net-lan { color: #16a34a; }
+
 /* ─── Stash Dialog ─── */
 .stash-dialog {
   background: var(--bg-2);
@@ -4895,13 +4946,11 @@ dialog::backdrop {
   .dl-code { font-size: .7rem; }
   .dl-gutter { font-size: .6rem; min-width: 28px; }
 
-  /* Terminal: fullscreen */
-  #terminal-view { padding: 0; }
-  .term-tabs { font-size: .7rem; }
-  .term-tab { padding: 3px 8px; }
+  /* Terminal mobile: handled by dedicated mobile terminal section below */
+  .term-search input { font-size: .8rem; }
 
-  /* Stash dialog: full width */
-  .stash-dialog { min-width: unset; width: 95vw; }
+  /* Dialogs: full width on mobile */
+  .stash-dialog, .mobile-connect-dialog { min-width: unset; width: 95vw; }
 
   /* Project search bar */
   .project-search-bar { flex-wrap: wrap; gap: 4px; }
@@ -4923,4 +4972,184 @@ dialog::backdrop {
   .fi-action { width: 28px; height: 28px; }
   .stash-item { padding: 12px 16px; }
   .stash-actions .btn { padding: 6px 12px; min-height: 32px; }
+  /* Terminal touch: close button always visible, larger targets */
+  .term-head .th-close { opacity: 1; min-width: 32px; min-height: 28px; }
+  .term-tab { min-height: 32px; }
+}
+
+/* ─── Mobile Terminal: Dedicated UI ─── */
+
+/* Hidden by default on desktop */
+.mob-term-tabs,
+.mob-term-actions {
+  display: none;
+}
+
+/* Mobile Tab Bar */
+@media (max-width: 600px), (hover: none) and (pointer: coarse) and (max-width: 900px) {
+  /* Hide desktop per-terminal headers on mobile (they get in the way) */
+  .term-head { display: none !important; }
+
+  /* Hide split dividers (no splits on mobile) */
+  .split-divider { display: none !important; }
+  .split-container { display: block !important; }
+  .split-child { width: 100% !important; height: 100% !important; }
+  .drop-overlay { display: none !important; }
+
+  /* Mobile tab bar */
+  .mob-term-tabs {
+    display: flex !important;
+    align-items: center;
+    gap: 0;
+    height: 36px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg-0);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  .mob-term-tabs::-webkit-scrollbar { display: none; }
+
+  .mob-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--text-3);
+    font-size: .75rem;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s ease;
+    position: relative;
+  }
+  .mob-tab.active {
+    color: var(--text-0);
+    background: var(--bg-1);
+    border-bottom-color: var(--accent);
+  }
+  .mob-tab-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .mob-tab-name {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mob-tab-add {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-3);
+    padding: 0 16px;
+    min-width: 44px;
+    justify-content: center;
+  }
+  .mob-tab-add:hover,
+  .mob-tab-add:active {
+    color: var(--accent);
+    background: rgba(99, 102, 241, .08);
+  }
+
+  /* Terminal panels on mobile: full remaining height, no splits */
+  #terminal-view.active {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+  .term-panels {
+    flex: 1;
+    height: auto !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .term-panels .split-leaf {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .term-panels .xterm-wrap {
+    flex: 1;
+    min-height: 0;
+  }
+  .term-panels .xterm {
+    height: 100% !important;
+  }
+  .term-panels .xterm-viewport {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Mobile Quick-Action Bar */
+  .mob-term-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 4px;
+    height: 38px;
+    flex-shrink: 0;
+    padding: 2px 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg-1);
+    border-top: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+  .mob-term-actions::-webkit-scrollbar { display: none; }
+
+  .mob-term-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    min-width: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-2);
+    color: var(--text-1);
+    font-family: var(--mono);
+    font-size: .72rem;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all .1s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .mob-term-actions button:active,
+  .mob-btn-flash {
+    background: var(--accent) !important;
+    color: #fff !important;
+    border-color: var(--accent) !important;
+    transform: scale(.94);
+  }
+
+  /* Empty state on mobile */
+  .term-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .term-empty .btn {
+    font-size: .85rem;
+    padding: 12px 24px;
+    min-height: 44px;
+  }
+
+  /* Search bar position on mobile */
+  .term-search { top: 36px; }
 }

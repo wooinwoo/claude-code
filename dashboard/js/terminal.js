@@ -2,6 +2,11 @@
 import { app } from './state.js';
 import { esc, showToast, escapeHtml, IMG_EXT } from './utils.js';
 
+// ─── Mobile Detection ───
+export function isMobile() {
+  return window.innerWidth <= 600 || (window.matchMedia('(hover: none) and (pointer: coarse)').matches && window.innerWidth <= 900);
+}
+
 // ─── Write Buffer ───
 function bufferWrite(t, data, id) {
   if (!id) { t.xterm.write(data); return; }
@@ -229,9 +234,15 @@ export function removeFromLayoutTree(termId) {
 
 // ─── Layout Rendering ───
 export function renderLayout() {
+  if (isMobile()) { renderMobileLayout(); return; }
   const container = document.getElementById('term-panels');
   for (const [, t] of app.termMap) { if (t.element.parentNode) t.element.parentNode.removeChild(t.element); }
   container.innerHTML = '';
+  // Hide mobile elements on desktop
+  const mobTabs = document.getElementById('mob-term-tabs');
+  const mobActions = document.getElementById('mob-term-actions');
+  if (mobTabs) mobTabs.style.display = 'none';
+  if (mobActions) mobActions.style.display = 'none';
   if (!app.layoutRoot) {
     container.innerHTML = '<div class="term-empty"><button class="btn" onclick="openNewTermModal()">+ New Terminal</button></div>';
     return;
@@ -252,6 +263,79 @@ export function renderLayout() {
     setTimeout(fitAllTerminals, 120);
   });
   saveLayout();
+}
+
+// ─── Mobile Layout ───
+function renderMobileLayout() {
+  const container = document.getElementById('term-panels');
+  const mobTabs = document.getElementById('mob-term-tabs');
+  const mobActions = document.getElementById('mob-term-actions');
+
+  // Detach all terminal elements
+  for (const [, t] of app.termMap) { if (t.element.parentNode) t.element.parentNode.removeChild(t.element); }
+  container.innerHTML = '';
+
+  if (app.termMap.size === 0) {
+    container.innerHTML = '<div class="term-empty"><button class="btn" onclick="openNewTermModal()">+ New Terminal</button></div>';
+    if (mobTabs) mobTabs.style.display = 'none';
+    if (mobActions) mobActions.style.display = 'none';
+    return;
+  }
+
+  // Show mobile elements
+  if (mobTabs) mobTabs.style.display = '';
+  if (mobActions) mobActions.style.display = '';
+
+  // Ensure activeTermId is valid
+  if (!app.activeTermId || !app.termMap.has(app.activeTermId)) {
+    app.activeTermId = app.termMap.keys().next().value;
+  }
+
+  // Render tab bar
+  if (mobTabs) {
+    let tabsHtml = '';
+    for (const [id, t] of app.termMap) {
+      const active = id === app.activeTermId ? ' active' : '';
+      tabsHtml += `<button class="mob-tab${active}" data-tid="${id}" onclick="mobileSwitchTerm('${id}')">` +
+        `<span class="mob-tab-dot" style="background:${t.color}"></span>` +
+        `<span class="mob-tab-name">${esc(t.label)}</span></button>`;
+    }
+    tabsHtml += `<button class="mob-tab mob-tab-add" onclick="openNewTermModal()">+</button>`;
+    mobTabs.innerHTML = tabsHtml;
+    // Auto-scroll to active tab
+    const activeTab = mobTabs.querySelector('.mob-tab.active');
+    if (activeTab) activeTab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }
+
+  // Render only the active terminal
+  const activeT = app.termMap.get(app.activeTermId);
+  if (activeT) {
+    activeT.element.style.flex = '1';
+    container.appendChild(activeT.element);
+    requestAnimationFrame(() => {
+      if (!activeT.opened) {
+        activeT.xterm.open(activeT.element);
+        try { activeT.xterm.loadAddon(new WebglAddon.WebglAddon()); } catch {}
+        try { activeT.xterm.loadAddon(new ImageAddon.ImageAddon()); } catch {}
+        activeT.opened = true;
+        if (activeT.pendingBuffer) { activeT.xterm.write(activeT.pendingBuffer); activeT.pendingBuffer = null; }
+      }
+      setTimeout(() => { try { activeT.fitAddon.fit(); } catch {} }, 80);
+      if (app.ws?.readyState === 1) app.ws.send(JSON.stringify({ type: 'resize', termId: app.activeTermId, cols: activeT.xterm.cols, rows: activeT.xterm.rows }));
+    });
+  }
+  saveLayout();
+}
+
+export function mobileSwitchTerm(termId) {
+  if (!app.termMap.has(termId)) return;
+  app.activeTermId = termId;
+  renderMobileLayout();
+}
+
+export function mobileCloseTerm(termId) {
+  closeTerminal(termId);
+  renderMobileLayout();
 }
 
 function renderNode(node, container) {
@@ -686,6 +770,12 @@ export function setupTermEventDelegation() {
   const termPanelsObs = new ResizeObserver(debouncedFit);
   termPanelsObs.observe(_termPanels);
   window.addEventListener('resize', debouncedFit);
+  // Re-render layout when crossing mobile/desktop threshold
+  let wasMobile = isMobile();
+  window.addEventListener('resize', () => {
+    const nowMobile = isMobile();
+    if (nowMobile !== wasMobile) { wasMobile = nowMobile; renderLayout(); }
+  });
 }
 
 // ─── Branch picker for new terminal ───
@@ -729,4 +819,65 @@ export function selectBranch(el) {
   if (app._selectedBranch && app._selectedBranch.value === el.dataset.value && app._selectedBranch.type === el.dataset.type) { app._selectedBranch = null; return; }
   el.classList.add('selected');
   app._selectedBranch = { type: el.dataset.type, value: el.dataset.value, cwd: el.dataset.cwd || '' };
+}
+
+// ─── Mobile Quick-Action Keys ───
+const KEY_MAP = {
+  'escape': '\x1b',
+  'tab': '\t',
+  'ctrl-c': '\x03',
+  'ctrl-d': '\x04',
+  'ctrl-z': '\x1a',
+  'ctrl-l': '\x0c',
+  'ctrl-r': '\x12',
+  'ctrl-a': '\x01',
+  'ctrl-e': '\x05',
+  'up': '\x1b[A',
+  'down': '\x1b[B',
+};
+
+export function setupMobileActions() {
+  const bar = document.getElementById('mob-term-actions');
+  if (!bar) return;
+  bar.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-key]');
+    if (!btn) return;
+    e.preventDefault();
+    const key = btn.dataset.key;
+    const seq = KEY_MAP[key];
+    if (!seq || !app.activeTermId || !app.ws || app.ws.readyState !== 1) return;
+    app.ws.send(JSON.stringify({ type: 'input', termId: app.activeTermId, data: seq }));
+    // Focus the terminal after key press
+    const t = app.termMap.get(app.activeTermId);
+    if (t) t.xterm.focus();
+    // Visual feedback
+    btn.classList.add('mob-btn-flash');
+    setTimeout(() => btn.classList.remove('mob-btn-flash'), 150);
+  });
+}
+
+// ─── Mobile Swipe to Switch Terminals ───
+export function setupMobileSwipe() {
+  const container = document.getElementById('term-panels');
+  if (!container) return;
+  let startX = 0, startY = 0, swiping = false;
+  container.addEventListener('touchstart', e => {
+    if (!isMobile() || app.termMap.size < 2) return;
+    const touch = e.touches[0];
+    startX = touch.clientX; startY = touch.clientY; swiping = true;
+  }, { passive: true });
+  container.addEventListener('touchend', e => {
+    if (!swiping || !isMobile()) return;
+    swiping = false;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    // Only horizontal swipe, minimum 60px, must be more horizontal than vertical
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const ids = [...app.termMap.keys()];
+    const idx = ids.indexOf(app.activeTermId);
+    if (idx < 0) return;
+    if (dx < 0 && idx < ids.length - 1) mobileSwitchTerm(ids[idx + 1]); // swipe left → next
+    if (dx > 0 && idx > 0) mobileSwitchTerm(ids[idx - 1]); // swipe right → prev
+  }, { passive: true });
 }

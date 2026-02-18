@@ -184,6 +184,11 @@
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
           </svg>
         </button>
+        <button class="header-btn" onclick="showMobileConnect()" title="Mobile Connect">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+        </button>
         <span class="conn-dot" id="conn-dot"></span>
         <button
           class="header-btn"
@@ -382,12 +387,28 @@
 
       <!-- Terminal View -->
       <div class="view" id="terminal-view">
+        <!-- Mobile terminal tab bar -->
+        <div class="mob-term-tabs" id="mob-term-tabs"></div>
         <div class="term-panels" id="term-panels">
           <div class="term-empty">
             <button class="btn" onclick="openNewTermModal()">
               + New Terminal
             </button>
           </div>
+        </div>
+        <!-- Mobile quick action bar -->
+        <div class="mob-term-actions" id="mob-term-actions">
+          <button data-key="escape">Esc</button>
+          <button data-key="tab">Tab</button>
+          <button data-key="ctrl-c">^C</button>
+          <button data-key="ctrl-d">^D</button>
+          <button data-key="ctrl-z">^Z</button>
+          <button data-key="ctrl-l">^L</button>
+          <button data-key="up">&#x25B2;</button>
+          <button data-key="down">&#x25BC;</button>
+          <button data-key="ctrl-r">^R</button>
+          <button data-key="ctrl-a">^A</button>
+          <button data-key="ctrl-e">^E</button>
         </div>
         <div class="term-search" id="term-search-bar">
           <input
@@ -1328,6 +1349,20 @@
     </div>
 
     <!-- Stash List Dialog -->
+    <dialog id="mobile-connect-dialog" class="mobile-connect-dialog">
+      <div class="mobile-connect-head">
+        <h3>Mobile Connect</h3>
+        <button onclick="this.closest('dialog').close()" class="btn">&times;</button>
+      </div>
+      <div class="mobile-connect-body">
+        <p class="mobile-connect-desc">Scan QR code or copy URL to connect from mobile</p>
+        <div id="qr-container" style="width:200px;height:200px;border-radius:8px;overflow:hidden;background:#fff"></div>
+        <div class="mobile-connect-url" id="mobile-connect-url"></div>
+        <button class="btn mobile-connect-copy" onclick="copyMobileUrl()">Copy URL</button>
+        <p class="mobile-connect-hint">Token is saved — device stays authenticated</p>
+      </div>
+    </dialog>
+
     <dialog id="stash-list-dialog" class="stash-dialog">
       <div class="stash-dialog-head">
         <h3>Stash List</h3>

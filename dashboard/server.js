@@ -1,11 +1,13 @@
 import { createServer } from 'node:http';
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
-import { readFileSync, existsSync, unlinkSync, watch } from 'node:fs';
+import { readFileSync, existsSync, unlinkSync, watch, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
+import { randomBytes } from 'node:crypto';
+import { networkInterfaces } from 'node:os';
 import { getProjects, PORT, POLL_INTERVALS, getProjectById, addProject, updateProject, deleteProject } from './lib/config.js';
 import { detectSessionState, getProjectSessions, getRecentActivity, discoverProjects } from './lib/claude-data.js';
 import { getGitStatus, getBranches } from './lib/git-service.js';
@@ -14,6 +16,7 @@ import { computeUsage, getStatsCache } from './lib/cost-service.js';
 import { startSession, resumeSession } from './lib/session-control.js';
 import { Poller } from './lib/poller.js';
 import { showNotification } from './lib/notify.js';
+import { generateQRSvg } from './lib/qr.js';
 
 // node-pty and ws are CJS modules
 const require = createRequire(import.meta.url);
@@ -48,6 +51,93 @@ async function withGitLock(projectId, fn) {
   // Clean up when chain settles and no new ops were queued
   wrapped.then(() => { if (_gitLocks.get(projectId) === wrapped) _gitLocks.delete(projectId); });
   return next;
+}
+
+// ──────────── LAN Auth ────────────
+const TOKEN_FILE = join(__dirname, '.cockpit-token');
+const TOKEN_COOKIE = 'cockpit-token';
+const COOKIE_MAX_AGE = 365 * 24 * 3600; // 1 year
+
+function loadOrCreateToken() {
+  try {
+    if (existsSync(TOKEN_FILE)) {
+      const saved = readFileSync(TOKEN_FILE, 'utf8').trim();
+      if (saved.length >= 16) return saved;
+    }
+  } catch {}
+  const token = randomBytes(16).toString('hex');
+  try { writeFileSync(TOKEN_FILE, token); } catch {}
+  return token;
+}
+const LAN_TOKEN = loadOrCreateToken();
+
+function isLocalhost(req) {
+  const addr = req.socket.remoteAddress;
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
+
+function parseCookies(req) {
+  const obj = {};
+  const hdr = req.headers.cookie;
+  if (!hdr) return obj;
+  for (const pair of hdr.split(';')) {
+    const [k, ...v] = pair.split('=');
+    obj[k.trim()] = v.join('=').trim();
+  }
+  return obj;
+}
+
+function isAuthenticated(req) {
+  if (isLocalhost(req)) return true;
+  const url = new URL(req.url, `http://localhost:${PORT}`);
+  if (url.searchParams.get('token') === LAN_TOKEN) return true;
+  const cookies = parseCookies(req);
+  if (cookies[TOKEN_COOKIE] === LAN_TOKEN) return true;
+  return false;
+}
+
+function serveLoginPage(res) {
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cockpit - Login</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:2rem;max-width:400px;width:90%}
+  h1{font-size:1.3rem;margin-bottom:.5rem}
+  p{color:#94a3b8;font-size:.85rem;margin-bottom:1.2rem;line-height:1.5}
+  input{width:100%;padding:.6rem .8rem;border:1px solid #475569;border-radius:6px;background:#0f172a;color:#e2e8f0;font-size:.9rem;font-family:monospace;margin-bottom:.8rem}
+  input:focus{outline:none;border-color:#818cf8}
+  button{width:100%;padding:.6rem;background:#818cf8;color:#fff;border:none;border-radius:6px;font-size:.9rem;cursor:pointer}
+  button:hover{background:#6366f1}
+  .err{color:#f87171;font-size:.8rem;margin-bottom:.5rem;display:none}
+</style>
+</head><body>
+<div class="card">
+  <h1>Cockpit Dashboard</h1>
+  <p>LAN access requires authentication.<br>Enter the token shown in the server console.</p>
+  <div class="err" id="err">Invalid token</div>
+  <form onsubmit="return doLogin()">
+    <input id="tok" placeholder="Access token" autofocus autocomplete="off">
+    <button type="submit">Login</button>
+  </form>
+</div>
+<script>
+function doLogin(){
+  var t=document.getElementById('tok').value.trim();
+  if(!t)return false;
+  document.cookie='${TOKEN_COOKIE}='+t+';path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax';
+  fetch('/api/health',{credentials:'same-origin'}).then(function(r){
+    if(r.ok){location.href='/';}
+    else{document.getElementById('err').style.display='block';}
+  });
+  return false;
+}
+</script>
+</body></html>`;
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(html);
 }
 
 // ──────────── Router ────────────
@@ -99,6 +189,41 @@ addRoute('GET', '/api/health', (_req, res) => {
     terminals: terminals?.size ?? 0,
     sseClients: poller.sseClients.size
   });
+});
+
+// LAN connection info (localhost only — for desktop app UI)
+function getNetworkIPs() {
+  const result = [];
+  try {
+    const nets = networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family !== 'IPv4' || net.internal) continue;
+        const oct1 = parseInt(net.address.split('.')[0]);
+        const oct2 = parseInt(net.address.split('.')[1]);
+        // Tailscale uses 100.64-127.x.x (CGNAT range)
+        const type = (oct1 === 100 && oct2 >= 64 && oct2 <= 127) ? 'tailscale' : 'lan';
+        result.push({ ip: net.address, type });
+      }
+    }
+  } catch {}
+  // Tailscale first (works remotely), then LAN
+  result.sort((a, b) => (a.type === 'tailscale' ? -1 : 1) - (b.type === 'tailscale' ? -1 : 1));
+  return result;
+}
+
+addRoute('GET', '/api/lan-info', (req, res) => {
+  if (!isLocalhost(req)) { json(res, { error: 'Forbidden' }, 403); return; }
+  json(res, { token: LAN_TOKEN, ips: getNetworkIPs(), port: PORT });
+});
+
+addRoute('GET', '/api/qr-code', (req, res) => {
+  if (!isLocalhost(req)) { res.writeHead(403); res.end(); return; }
+  const data = req.query.data;
+  if (!data) { res.writeHead(400); res.end('Missing data param'); return; }
+  const svg = generateQRSvg(data);
+  res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'no-store' });
+  res.end(svg);
 });
 
 // Serve frontend
@@ -1000,6 +1125,23 @@ addRoute('POST', '/api/projects/:id/dev-server/stop', async (req, res) => {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
+
+  // LAN auth: token via query param sets cookie and redirects
+  if (!isLocalhost(req) && url.searchParams.get('token') === LAN_TOKEN) {
+    res.writeHead(200, {
+      'Set-Cookie': `${TOKEN_COOKIE}=${LAN_TOKEN};path=/;max-age=${COOKIE_MAX_AGE};SameSite=Lax`,
+      'Content-Type': 'text/html'
+    });
+    res.end(`<html><head><meta http-equiv="refresh" content="0;url=/"></head><body>Redirecting...</body></html>`);
+    return;
+  }
+
+  // LAN auth: block unauthenticated requests
+  if (!isAuthenticated(req)) {
+    serveLoginPage(res);
+    return;
+  }
+
   const route = matchRoute(req.method, url.pathname);
 
   if (route) {
@@ -1019,7 +1161,14 @@ const server = createServer(async (req, res) => {
 
 // ──────────── WebSocket Terminal ────────────
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({
+  server,
+  verifyClient: ({ req }) => isAuthenticated(req)
+});
+
+// Clean env for child terminals: remove CLAUDECODE to allow nested claude launches
+const cleanEnv = { ...process.env, TERM: 'xterm-256color' };
+delete cleanEnv.CLAUDECODE;
 
 // Track active PTY processes: Map<termId, { pty, projectId, buffer, command }>
 const terminals = new Map();
@@ -1087,7 +1236,7 @@ function restoreTerminals() {
     const term = pty.spawn(shell, [], {
       name: 'xterm-256color',
       cols: 120, rows: 30, cwd,
-      env: { ...process.env, TERM: 'xterm-256color' }
+      env: cleanEnv
     });
 
     term.onData((data) => {
@@ -1182,7 +1331,7 @@ wss.on('connection', (ws) => {
           cols: msg.cols || 120,
           rows: msg.rows || 30,
           cwd,
-          env: { ...process.env, TERM: 'xterm-256color' }
+          env: cleanEnv
         });
 
         term.onData((data) => {
@@ -1267,17 +1416,16 @@ wss.on('connection', (ws) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n  Claude Code Dashboard`);
   console.log(`  http://localhost:${PORT}`);
-  // Show LAN IP for mobile access
-  try {
-    const nets = require('os').networkInterfaces();
-    for (const name of Object.keys(nets)) {
-      for (const net of nets[name]) {
-        if (net.family === 'IPv4' && !net.internal) {
-          console.log(`  http://${net.address}:${PORT} (LAN)`);
-        }
-      }
-    }
-  } catch {}
+  // Show network IPs + auth token for mobile access
+  const netIPs = getNetworkIPs();
+  for (const { ip, type } of netIPs) {
+    const label = type === 'tailscale' ? 'Tailscale' : 'LAN';
+    console.log(`  http://${ip}:${PORT}?token=${LAN_TOKEN} (${label})`);
+  }
+  if (netIPs.length) {
+    console.log(`\n  Token: ${LAN_TOKEN}`);
+    console.log(`  (localhost requires no token)`);
+  }
   console.log('');
   if (!process.argv.includes('--no-open')) {
     spawn('cmd', ['/c', 'start', `http://localhost:${PORT}`], { detached: true, stdio: 'ignore' }).unref();

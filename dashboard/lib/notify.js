@@ -1,22 +1,27 @@
 import { spawn } from 'node:child_process';
 
 /**
- * Show a Windows toast notification via PowerShell WinRT API.
- * Fires and forgets — the detached PowerShell process exits after showing the toast.
+ * Show a Windows toast notification via PowerShell.
+ * Uses BalloonTip (reliable on all Windows) + WinRT toast (Windows 10+) as fallback.
  */
 export function showNotification(title, body) {
+  // Method 1: BalloonTip — works reliably on all Windows versions
   const script = `
-[void][Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime]
-$t=[System.Security.SecurityElement]::Escape($env:NT)
-$b=[System.Security.SecurityElement]::Escape($env:NB)
-$d=New-Object Windows.Data.Xml.Dom.XmlDocument
-$d.LoadXml("<toast><visual><binding template='ToastGeneric'><text>$t</text><text>$b</text></binding></visual></toast>")
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Cockpit').Show([Windows.UI.Notifications.ToastNotification]::new($d))`;
+Add-Type -AssemblyName System.Windows.Forms
+$n=New-Object System.Windows.Forms.NotifyIcon
+$n.Icon=[System.Drawing.SystemIcons]::Information
+$n.BalloonTipIcon='Info'
+$n.BalloonTipTitle=$env:NT
+$n.BalloonTipText=$env:NB
+$n.Visible=$true
+$n.ShowBalloonTip(8000)
+Start-Sleep -Seconds 9
+$n.Dispose()`;
   try {
     const buf = Buffer.from(script, 'utf16le');
     const ps = spawn('powershell', ['-NoProfile', '-NonInteractive', '-EncodedCommand', buf.toString('base64')], {
       windowsHide: true, detached: true, stdio: 'ignore',
-      env: { ...process.env, NT: title, NB: body }
+      env: { ...process.env, NT: String(title), NB: String(body) }
     });
     ps.unref();
   } catch (err) {

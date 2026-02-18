@@ -33,6 +33,7 @@ dashboard/src-tauri/target/
 dashboard/cost-cache.json
 dashboard/projects.json
 dashboard/session-state.json
+dashboard/.cockpit-token
 
 # Dashboard - binary
 dashboard/cockpit.exe
